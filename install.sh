@@ -102,6 +102,7 @@ echo "[1/7] Creation des repertoires..."
 mkdir -p "$RLM_DIR/hooks"
 mkdir -p "$RLM_DIR/context/chunks"
 mkdir -p "$SKILLS_DIR/rlm-analyze"
+mkdir -p "$SKILLS_DIR/rlm-parallel"
 echo "  OK - Repertoires crees"
 
 # =============================================================================
@@ -116,9 +117,10 @@ echo "  OK - Hooks installes"
 # =============================================================================
 # 3. Copy skill
 # =============================================================================
-echo "[3/7] Installation du skill /rlm-analyze..."
+echo "[3/7] Installation des skills RLM..."
 cp "$SCRIPT_DIR/templates/skills/rlm-analyze/skill.md" "$SKILLS_DIR/rlm-analyze/"
-echo "  OK - Skill installe"
+cp "$SCRIPT_DIR/templates/skills/rlm-parallel/skill.md" "$SKILLS_DIR/rlm-parallel/"
+echo "  OK - Skills /rlm-analyze et /rlm-parallel installes"
 
 # =============================================================================
 # 4. Configure MCP server
@@ -317,9 +319,9 @@ echo "  Installation terminee avec succes!"
 echo "=============================================="
 echo ""
 echo "RLM est maintenant installe avec :"
-echo "  - 8 tools MCP disponibles"
+echo "  - 9 tools MCP disponibles"
 echo "  - Auto-chunking active (hook Stop)"
-echo "  - Skill /rlm-analyze installe"
+echo "  - Skills /rlm-analyze et /rlm-parallel installes"
 echo ""
 echo "PROCHAINE ETAPE:"
 echo "  Relancez Claude Code pour activer RLM"

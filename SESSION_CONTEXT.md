@@ -184,7 +184,7 @@ Letta benchmark : filesystem + grep = 74% accuracy > Mem0 avec embeddings (68.5%
 |------------|-------------|--------|
 | **5.1 BM25S** | Ranking par pertinence (500x plus rapide) | FAIT |
 | **5.2 Grep++** | Fuzzy matching + scoring | A FAIRE |
-| **5.3 Sub-agents** | Analyse parallele (Partition + Map) | A FAIRE |
+| **5.3 Sub-agents** | Analyse parallele (Partition + Map) | EN COURS |
 | **5.4 Embeddings** | BACKUP seulement si BM25 < 70% | OPTIONNEL |
 | **5.5 Multi-sessions** | Format enrichi + cross-session | A FAIRE |
 | **5.6 Retention** | LRU-Soft + immunite auto | A FAIRE |
@@ -219,6 +219,14 @@ Letta benchmark : filesystem + grep = 74% accuracy > Mem0 avec embeddings (68.5%
 
 **Documentation complete** : `docs/PHASE5_PLAN.md`
 
+**Phase 5.3 implementee** (2026-01-18) :
+- `templates/skills/rlm-parallel/skill.md` - Skill analyse parallele
+- Pattern "Partition + Map" : 3 Task tools paralleles + 1 merger
+- Modele : Sonnet (preference utilisateur)
+- Cout : $0 (Task tools inclus dans abonnement Claude Code Pro/Max)
+- Note : MCP Sampling non supporte par Claude Code (issue #1785) → Skill = seule option
+- `install.sh` mis a jour pour installer /rlm-parallel automatiquement
+
 Voir [ROADMAP.md](ROADMAP.md) pour les details.
 
 ---
@@ -249,13 +257,14 @@ Voir [ROADMAP.md](ROADMAP.md) pour les details.
 |------|-------------|--------|
 | `rlm_search` | Recherche BM25 par pertinence (FR/EN) | OK |
 
-### Phase 3 - Auto-chunking
+### Phase 3 - Auto-chunking & Skills
 
 | Composant | Description | Statut |
 |-----------|-------------|--------|
 | Hook Stop | Detection auto-chunk (10 tours / 30 min) | OK |
 | Hook PostToolUse | Reset compteur apres chunk | OK |
-| Skill `/rlm-analyze` | Analyser chunk avec sub-agent | OK |
+| Skill `/rlm-analyze` | Analyser 1 chunk avec sub-agent | OK |
+| Skill `/rlm-parallel` | Analyser 3 chunks en parallele + merger | OK |
 
 ---
 
@@ -284,7 +293,8 @@ Voir [ROADMAP.md](ROADMAP.md) pour les details.
 | `mcp_server/tools/navigation.py` | Fonctions Phase 2 |
 | `hooks/auto_chunk_check.py` | Detection auto-chunk |
 | `hooks/reset_chunk_counter.py` | Reset compteur |
-| `templates/skills/rlm-analyze/skill.md` | Skill sub-agent |
+| `templates/skills/rlm-analyze/skill.md` | Skill analyse 1 chunk |
+| `templates/skills/rlm-parallel/skill.md` | Skill analyse parallele (3 chunks) |
 | `context/session_memory.json` | Insights stockes |
 | `context/index.json` | Index des chunks |
 | `context/chunks/*.md` | Chunks de conversation |
@@ -323,17 +333,22 @@ cd /Users/amx/Documents/Joy_Claude/RLM && git add . && git commit -m "message" &
 
 ## 8. Prochaine Action
 
-**Phase 5 : Avance** - Prochaine etape du developpement RLM.
+**Phase 5.3 : Sub-agents** - EN COURS
 
-Options a considerer :
-- **5.1 Embeddings** : Recherche semantique (sentence-transformers + FAISS)
-- **5.2 Multi-sessions** : Acceder aux chunks d'autres sessions
-- **5.3 Export/Backup** : Sauvegarde automatique
+Fait :
+- Skill `/rlm-parallel` cree
+- `install.sh` mis a jour
 
-Phase 4 restante (P2/P3, optionnel) :
-- Compression des vieux chunks (gzip)
-- Archivage automatique
-- Dashboard visualisation
+A faire :
+- Tester le skill manuellement
+- Installer via copie manuelle ou `./install.sh`
+- Valider les 3 tests du plan
+- Commit + push GitHub
+
+**Prochaines phases** :
+- **5.2 Grep++** : Fuzzy matching + scoring
+- **5.5 Multi-sessions** : Format enrichi + cross-session
+- **5.6 Retention** : LRU-Soft + immunite auto
 
 **Pour tester les tools existants** :
 ```
@@ -341,7 +356,9 @@ rlm_status()           -> Insights + Chunks stats + Most accessed
 rlm_list_chunks()      -> Liste des chunks avec access_count
 rlm_recall()           -> Insights sauvegardes
 rlm_chunk("content")   -> Auto-summary + dedup
-/rlm-analyze chunk_id "question"  -> Analyser avec sub-agent
+rlm_search("query")    -> Recherche BM25 (Phase 5.1)
+/rlm-analyze chunk_id "question"  -> Analyser 1 chunk
+/rlm-parallel "question"          -> Analyser 3 chunks en parallele
 ```
 
 ---
@@ -356,6 +373,7 @@ rlm_chunk("content")   -> Auto-summary + dedup
 | "Rappelle-moi la decision sur X" | `rlm_recall("X")` | Retrouver un insight |
 | "On a decide que..." | `rlm_remember(...)` | Sauvegarder la decision |
 | "Analyse ce vieux chunk" | `/rlm-analyze chunk_id` | Deleguer a un sub-agent |
+| "Cherche dans plusieurs chunks" | `/rlm-parallel "question"` | Analyse parallele + fusion |
 
 ---
 
