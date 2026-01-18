@@ -63,7 +63,7 @@ MCP Server + Hooks + Fichiers
 
 ## Roadmap
 
-- [ ] **Phase 1** : MCP Server minimal (remember/recall)
+- [x] **Phase 1** : MCP Server minimal (remember/recall) ✅
 - [ ] **Phase 2** : Navigation (peek/grep/chunk)
 - [ ] **Phase 3** : Sub-agents + Hooks
 - [ ] **Phase 4** : Production (résumés auto, docs)
@@ -72,14 +72,46 @@ MCP Server + Hooks + Fichiers
 ## Installation
 
 ```bash
-# À venir - Phase 1 en cours
+# 1. Cloner le repo
+git clone https://github.com/EncrEor/rlm-claude.git
+cd rlm-claude
+
+# 2. Installer les dépendances
+pip install -r mcp_server/requirements.txt
+
+# 3. Ajouter à Claude Code
+claude mcp add rlm-server -- python3 $(pwd)/mcp_server/server.py
+
+# 4. Vérifier la connexion
+claude mcp list
 ```
 
 ## Usage
 
-```bash
-# À venir
+Une fois installé, Claude a accès aux tools RLM :
+
+```python
+# Sauvegarder un insight important
+rlm_remember("Le client préfère les formats 500ml", category="preference", importance="high")
+
+# Retrouver des insights
+rlm_recall(query="client")  # Recherche par mot-clé
+rlm_recall(category="decision")  # Filtrer par catégorie
+
+# Voir l'état de la mémoire
+rlm_status()
+
+# Supprimer un insight
+rlm_forget("abc12345")  # Par ID
 ```
+
+### Catégories disponibles
+- `decision` : Décisions prises
+- `fact` : Faits découverts
+- `preference` : Préférences utilisateur
+- `finding` : Découvertes techniques
+- `todo` : Actions à faire
+- `general` : Autre
 
 ## Références
 
@@ -99,4 +131,4 @@ MIT License - voir [LICENSE](LICENSE)
 
 ---
 
-**Note** : Ce projet est en développement actif. La Phase 1 (MCP Server minimal) est la prochaine étape.
+**Note** : Phase 1 terminée (2026-01-18). Phase 2 (navigation tools) en cours de développement.
