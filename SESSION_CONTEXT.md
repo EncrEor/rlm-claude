@@ -75,19 +75,21 @@ RLM/
 | GitHub repo créé et poussé | ✅ |
 | **Validation nouvelle session** | ✅ |
 
-### Phase 2 : Navigation ✅ IMPLÉMENTÉE (2026-01-18)
+### Phase 2 : Navigation ✅ VALIDÉE (2026-01-18)
 
 | Tâche | Statut |
 |-------|--------|
-| Tool `rlm_chunk` (sauvegarder contenu) | ✅ Implémenté |
-| Tool `rlm_peek` (voir portion de chunk) | ✅ Implémenté |
-| Tool `rlm_grep` (chercher pattern) | ✅ Implémenté |
-| Tool `rlm_list_chunks` (lister les chunks) | ✅ Implémenté |
+| Tool `rlm_chunk` (sauvegarder contenu) | ✅ |
+| Tool `rlm_peek` (voir portion de chunk) | ✅ |
+| Tool `rlm_grep` (chercher pattern) | ✅ |
+| Tool `rlm_list_chunks` (lister les chunks) | ✅ |
 | Index.json v2.0.0 avec métadonnées | ✅ |
 | Tests fonctions Python | ✅ |
-| **Tests MCP end-to-end** | ⏳ Relancer Claude Code |
+| Tests MCP end-to-end | ✅ |
+| `rlm_status()` inclut chunks | ✅ |
+| GitHub push | ✅ |
 
-**Note** : Les fonctions Python sont validées. Pour tester via MCP, il faut relancer Claude Code pour charger les nouveaux tools.
+**Validation** : Tous les tools testés avec succès dans une nouvelle session Claude Code.
 
 ### Phase 3 : Sub-agents (PROCHAINE)
 
@@ -191,26 +193,19 @@ cd /Users/amx/Documents/Joy_Claude/RLM && git add . && git commit -m "message" &
 
 ## 8. Prochaine Action
 
-**Tester les tools Phase 2** après avoir relancé Claude Code :
+**Phase 3 : Sub-agents** - Prochaine étape du développement RLM.
 
+Tools à implémenter :
+- `rlm_sub_query` : Déléguer une question à un sub-agent sur un chunk spécifique
+- Hooks auto-chunking : Sauvegarder automatiquement l'historique
+- Metrics coût : Suivre l'utilisation tokens
+
+**Pour tester les tools existants** :
 ```
-1. rlm_list_chunks()
-   → Doit montrer le chunk de test créé
-
-2. rlm_chunk("Nouveau contenu...", summary="Description", tags="tag1,tag2")
-   → Doit créer un nouveau chunk
-
-3. rlm_peek("2026-01-18_001")
-   → Doit afficher le contenu
-
-4. rlm_grep("RLM")
-   → Doit trouver des matches
-
-5. rlm_status()
-   → Doit montrer insights + chunks
+rlm_status()           → Insights + Chunks stats
+rlm_list_chunks()      → Liste des chunks disponibles
+rlm_recall()           → Insights sauvegardés
 ```
-
-Si tout fonctionne → Phase 3 (sub-agents).
 
 ---
 
