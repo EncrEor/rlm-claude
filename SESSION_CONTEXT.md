@@ -1,7 +1,22 @@
 # RLM - Contexte de Session
 
 > **Fichier de reprise** : À lire au début de chaque session pour restaurer le contexte complet.
-> **Dernière MAJ** : 2026-01-18 (Phase 2 implémentée)
+> **Dernière MAJ** : 2026-01-18 (Phase 2 validée)
+
+---
+
+## 🚀 DÉMARRAGE DE SESSION
+
+**À faire au début de chaque session RLM :**
+
+1. **Lire ce fichier** (SESSION_CONTEXT.md) pour le contexte global
+2. **Invoquer `/strategie`** pour activer le mindset R&D (explorer et challenger avant d'exécuter)
+3. **Lire la doc si besoin** :
+   - `IMPLEMENTATION_PROPOSAL.md` - Architecture détaillée
+   - `STATE_OF_ART.md` - Recherche sur RLM, Letta, TTT
+   - `CHECKLIST_PAPER_VS_SOLUTION.md` - Couverture du paper MIT
+
+**Mindset R&D** : On explore, on challenge, on améliore AVANT d'exécuter. Profondeur > Rapidité.
 
 ---
 

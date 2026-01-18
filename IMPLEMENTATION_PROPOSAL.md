@@ -457,27 +457,28 @@ Après analyse, **MCP Server + Hooks** est l'approche la plus puissante et pére
 
 ## 7. Roadmap Détaillée
 
-### Phase 1 : Fondations (Session actuelle + 1)
+### Phase 1 : Fondations ✅ TERMINÉE (2026-01-18)
 
 | Tâche | Description | Livrable |
 |-------|-------------|----------|
-| 1.1 | Structure fichiers RLM/ | Répertoires créés |
-| 1.2 | MCP Server minimal | server.py fonctionnel |
-| 1.3 | Tool `rlm_remember`/`rlm_recall` | Mémoire session OK |
-| 1.4 | Intégration settings.json | MCP activé dans Claude Code |
-| 1.5 | Test manuel | Validation basique |
+| 1.1 | Structure fichiers RLM/ | ✅ Répertoires créés |
+| 1.2 | MCP Server minimal | ✅ server.py fonctionnel |
+| 1.3 | Tool `rlm_remember`/`rlm_recall` | ✅ Mémoire session OK |
+| 1.4 | Intégration settings.json | ✅ MCP activé dans Claude Code |
+| 1.5 | Test manuel | ✅ Validation basique |
 
-### Phase 2 : Navigation (Session +2)
+### Phase 2 : Navigation ✅ TERMINÉE (2026-01-18)
 
 | Tâche | Description | Livrable |
 |-------|-------------|----------|
-| 2.1 | Tool `rlm_peek` | Navigation dans chunks |
-| 2.2 | Tool `rlm_grep` | Recherche par pattern |
-| 2.3 | Tool `rlm_chunk` | Découpage automatique |
-| 2.4 | Index.json | Métadonnées chunks |
-| 2.5 | Tests sur vraie conversation | Validation end-to-end |
+| 2.1 | Tool `rlm_peek` | ✅ Navigation dans chunks |
+| 2.2 | Tool `rlm_grep` | ✅ Recherche par pattern |
+| 2.3 | Tool `rlm_chunk` | ✅ Sauvegarde contenu |
+| 2.4 | Tool `rlm_list_chunks` | ✅ Liste des chunks |
+| 2.5 | Index.json v2.0.0 | ✅ Métadonnées chunks |
+| 2.6 | Tests MCP end-to-end | ✅ Validation complète |
 
-### Phase 3 : Sub-agents (Session +3)
+### Phase 3 : Sub-agents (PROCHAINE)
 
 | Tâche | Description | Livrable |
 |-------|-------------|----------|
