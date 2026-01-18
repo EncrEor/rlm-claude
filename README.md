@@ -284,7 +284,6 @@ Dans `~/.claude/settings.json` :
 {
   "hooks": {
     "Stop": [{
-      "matcher": "*",
       "hooks": [{
         "type": "command",
         "command": "python3 ~/.claude/rlm/hooks/auto_chunk_check.py"
@@ -299,6 +298,8 @@ Dans `~/.claude/settings.json` :
     }]
   }
 }
+
+**Note**: Le hook `Stop` ne supporte pas les matchers (contrairement à `PostToolUse`).
 ```
 
 ---
