@@ -40,7 +40,7 @@ RLM/
 
 ## 3. État d'Avancement
 
-### Phase 1 : Fondations ✅ TERMINÉE (2026-01-18)
+### Phase 1 : Fondations ✅ VALIDÉE (2026-01-18)
 
 | Tâche | Statut |
 |-------|--------|
@@ -49,6 +49,9 @@ RLM/
 | Configuration Claude Code (`claude mcp add`) | ✅ |
 | Tests locaux | ✅ |
 | GitHub repo créé et poussé | ✅ |
+| **Validation nouvelle session** | ✅ |
+
+**Test validation** : Les 4 tools fonctionnent dans une session Claude Code fraîche. Le fichier SESSION_CONTEXT.md permet une reprise de contexte complète.
 
 **GitHub** : https://github.com/EncrEor/rlm-claude
 
