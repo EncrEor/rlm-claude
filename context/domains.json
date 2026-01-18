@@ -1,0 +1,47 @@
+{
+  "version": "1.0.0",
+  "description": "Suggested domains for RLM chunks. Users can use any domain, this is just a reference.",
+  "domains": {
+    "joy_juice": {
+      "description": "Domaines specifiques Joy Juice",
+      "list": [
+        "finance",
+        "legal",
+        "operations",
+        "commercial",
+        "marketing",
+        "rh",
+        "r&d",
+        "admin",
+        "qualite",
+        "expertise",
+        "performance",
+        "visibilite",
+        "notoriete",
+        "ventes",
+        "fidelisation",
+        "scaling",
+        "deck",
+        "website",
+        "seo",
+        "blog",
+        "erp",
+        "bp",
+        "bi"
+      ]
+    },
+    "default": {
+      "description": "Domaines generiques pour tout projet",
+      "list": [
+        "dev",
+        "research",
+        "planning",
+        "debug",
+        "test",
+        "docs",
+        "review",
+        "deploy"
+      ]
+    }
+  }
+}

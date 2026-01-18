@@ -1,7 +1,7 @@
 # RLM - Contexte de Session
 
 > **Fichier de reprise** : A lire au debut de chaque session pour restaurer le contexte complet.
-> **Derniere MAJ** : 2026-01-18 (Phase 4 validee)
+> **Derniere MAJ** : 2026-01-18 (Phase 5.5 en cours)
 
 ---
 
@@ -64,8 +64,11 @@ RLM/
 ├── mcp_server/           # Serveur MCP Python (FastMCP)
 │   ├── server.py         # Point d'entree (stdio transport)
 │   └── tools/
-│       ├── memory.py     # remember, recall, forget, status (Phase 1)
-│       └── navigation.py # chunk, peek, grep, list_chunks (Phase 2)
+│       ├── memory.py       # remember, recall, forget, status (Phase 1)
+│       ├── navigation.py   # chunk, peek, grep, list_chunks (Phase 2)
+│       ├── search.py       # BM25 search (Phase 5.1)
+│       ├── tokenizer_fr.py # Tokenization FR/EN (Phase 5.1)
+│       └── sessions.py     # sessions, domains (Phase 5.5)
 │
 ├── hooks/                # Phase 3 - Auto-chunking
 │   ├── auto_chunk_check.py    # Hook Stop - detection
@@ -78,9 +81,11 @@ RLM/
 │
 ├── context/              # Stockage persistant
 │   ├── session_memory.json   # Insights cles
-│   ├── index.json            # Index des chunks
+│   ├── index.json            # Index des chunks (v2.1.0)
+│   ├── sessions.json         # Index des sessions (Phase 5.5)
+│   ├── domains.json          # Domaines suggeres (Phase 5.5)
 │   └── chunks/               # Historique decoupe
-│       └── YYYY-MM-DD_NNN.md
+│       └── {date}_{project}_{seq}[_{ticket}][_{domain}].md
 │
 ├── install.sh                # Script installation automatique
 ├── STATE_OF_ART.md           # Etat de l'art (RLM, Letta, TTT-E2E)
@@ -186,8 +191,15 @@ Letta benchmark : filesystem + grep = 74% accuracy > Mem0 avec embeddings (68.5%
 | **5.2 Grep++** | Fuzzy matching + scoring | A FAIRE |
 | **5.3 Sub-agents** | Analyse parallele (Partition + Map) | FAIT |
 | **5.4 Embeddings** | BACKUP seulement si BM25 < 70% | OPTIONNEL |
-| **5.5 Multi-sessions** | Format enrichi + cross-session | A FAIRE |
+| **5.5 Multi-sessions** | Format enrichi + cross-session | EN COURS |
 | **5.6 Retention** | LRU-Soft + immunite auto | A FAIRE |
+
+**Phase 5.5 en cours** (2026-01-18) :
+- Nouveau format ID : `{date}_{project}_{seq}[_{ticket}][_{domain}]`
+- Sessions tracking via `sessions.json`
+- Nouveaux tools : `rlm_sessions`, `rlm_domains`
+- Syntaxe cross-session : `@session_id:chunk`
+- Domaines flexibles (pas de validation stricte)
 
 **Phase 5.1 implementee** (2026-01-18) :
 - `mcp_server/tools/tokenizer_fr.py` - Tokenization FR/EN zero dependance
@@ -251,11 +263,18 @@ Voir [ROADMAP.md](ROADMAP.md) pour les details.
 | `rlm_grep` | Chercher un pattern dans les chunks | OK |
 | `rlm_list_chunks` | Lister les chunks disponibles | OK |
 
-### Phase 5 - Search (BM25)
+### Phase 5.1 - Search (BM25)
 
 | Tool | Description | Statut |
 |------|-------------|--------|
 | `rlm_search` | Recherche BM25 par pertinence (FR/EN) | OK |
+
+### Phase 5.5 - Multi-sessions (EN COURS)
+
+| Tool | Description | Statut |
+|------|-------------|--------|
+| `rlm_sessions` | Lister sessions par projet/domaine | A VENIR |
+| `rlm_domains` | Lister domaines disponibles | A VENIR |
 
 ### Phase 3 - Auto-chunking & Skills
 
@@ -273,7 +292,8 @@ Voir [ROADMAP.md](ROADMAP.md) pour les details.
 | Question | Decision | Justification |
 |----------|----------|---------------|
 | Format chunks | Markdown (.md) | Lisible, facile a editer |
-| ID chunks | `YYYY-MM-DD_NNN` | Chronologique, unique |
+| ID chunks v1 | `YYYY-MM-DD_NNN` | Legacy, backward compat |
+| ID chunks v2 | `{date}_{project}_{seq}[_{ticket}][_{domain}]` | Phase 5.5, multi-sessions |
 | Taille max chunk | 3000 tokens | Balance contexte/granularite |
 | Transport MCP | stdio | Compatible Claude Code natif |
 | Stockage | Fichiers JSON/MD | Simple, portable, versionnable |
@@ -288,15 +308,19 @@ Voir [ROADMAP.md](ROADMAP.md) pour les details.
 
 | Fichier | Description |
 |---------|-------------|
-| `mcp_server/server.py` | Serveur MCP principal (8 tools) |
+| `mcp_server/server.py` | Serveur MCP principal (11 tools) |
 | `mcp_server/tools/memory.py` | Fonctions Phase 1 |
-| `mcp_server/tools/navigation.py` | Fonctions Phase 2 |
+| `mcp_server/tools/navigation.py` | Fonctions Phase 2 + 5.5 |
+| `mcp_server/tools/search.py` | BM25 search (Phase 5.1) |
+| `mcp_server/tools/sessions.py` | Sessions + domaines (Phase 5.5) |
 | `hooks/auto_chunk_check.py` | Detection auto-chunk |
 | `hooks/reset_chunk_counter.py` | Reset compteur |
 | `templates/skills/rlm-analyze/skill.md` | Skill analyse 1 chunk |
 | `templates/skills/rlm-parallel/skill.md` | Skill analyse parallele (3 chunks) |
 | `context/session_memory.json` | Insights stockes |
-| `context/index.json` | Index des chunks |
+| `context/index.json` | Index des chunks (v2.1.0) |
+| `context/sessions.json` | Index des sessions (Phase 5.5) |
+| `context/domains.json` | Domaines suggeres (Phase 5.5) |
 | `context/chunks/*.md` | Chunks de conversation |
 
 ---
@@ -333,13 +357,36 @@ cd /Users/amx/Documents/Joy_Claude/RLM && git add . && git commit -m "message" &
 
 ## 8. Prochaine Action
 
-**Phase 5.3 : Sub-agents** - FAIT (2026-01-18)
+**Phase 5.5 : Multi-sessions** - EN COURS (2026-01-18)
 
-Commit : `02e6bce` - feat(phase5.3): Add /rlm-parallel skill
+### Sous-phases Phase 5.5
 
-**Prochaines phases** :
+| Sous-phase | Description | Statut |
+|------------|-------------|--------|
+| **5.5a** | Fondation (format ID, parse, detect_project) | EN COURS |
+| **5.5b** | Sessions (sessions.py, sessions.json, tools) | A FAIRE |
+| **5.5c** | Cross-session (@syntax, filtres grep/search) | A FAIRE |
+
+### Decisions validees Phase 5.5
+
+| Question | Reponse |
+|----------|---------|
+| Scope | Tout d'un coup (5.5a + 5.5b + 5.5c) |
+| Migration | Chunks existants restent en format 1.0 |
+| Domaines | Flexibles - pas de validation stricte |
+
+### Fichiers a creer/modifier
+
+| Fichier | Action |
+|---------|--------|
+| `navigation.py` | Modifier - nouveau format ID |
+| `sessions.py` | CREER - gestion sessions |
+| `server.py` | Modifier - nouveaux tools |
+| `domains.json` | CREER - domaines suggeres |
+| `sessions.json` | CREER - index sessions |
+
+**Prochaines phases apres 5.5** :
 - **5.2 Grep++** : Fuzzy matching + scoring (thefuzz)
-- **5.5 Multi-sessions** : Format enrichi + cross-session
 - **5.6 Retention** : LRU-Soft + immunite auto
 
 **Pour tester les tools existants** :

@@ -13,7 +13,7 @@
 | **Phase 2** | VALIDEE | Navigation tools (chunk/peek/grep/list) |
 | **Phase 3** | VALIDEE | Auto-chunking + Skill /rlm-analyze |
 | **Phase 4** | VALIDEE | Production (auto-summary, dedup, access tracking) |
-| **Phase 5** | A FAIRE | Avance (embeddings, multi-sessions) |
+| **Phase 5** | EN COURS | Avance (BM25, multi-sessions, sub-agents) |
 
 ---
 
@@ -63,15 +63,17 @@ def auto_summarize(content: str, max_tokens: int = 200) -> str:
 
 **Changement strategique (2026-01-18)** : Apres recherche approfondie, on decouvre que le paper RLM MIT n'utilise PAS d'embeddings. Letta benchmark confirme : filesystem + grep = 74% accuracy > embeddings.
 
-### 5.1 BM25 Ranking
+### 5.1 BM25 Ranking - FAIT
 
-| Tache | Description | Priorite |
-|-------|-------------|----------|
-| Tool `rlm_search` | Recherche BM25S (500x plus rapide) | P1 |
-| Tokenization FR/EN | Stopwords, normalisation | P1 |
-| Scoring pertinence | Trier par score BM25 | P1 |
+| Tache | Description | Statut |
+|-------|-------------|--------|
+| Tool `rlm_search` | Recherche BM25S (500x plus rapide) | FAIT |
+| Tokenization FR/EN | Stopwords, normalisation | FAIT |
+| Scoring pertinence | Trier par score BM25 | FAIT |
 
-**Implementation** : BM25S (Scipy sparse matrices, pas rank_bm25)
+**Implementation** : BM25S avec tokenizer FR/EN zero dependance
+- `mcp_server/tools/search.py`
+- `mcp_server/tools/tokenizer_fr.py`
 
 ### 5.2 Grep Optimise
 
@@ -102,13 +104,35 @@ def auto_summarize(content: str, max_tokens: int = 200) -> str:
 | LanceDB | Stockage vectoriel Rust | P3 |
 | Dimensions Matryoshka | 384 dims (tronque de 768) | P3 |
 
-### 5.5 Multi-sessions (a definir)
+### 5.5 Multi-sessions - EN COURS
 
-| Tache | Description | Priorite |
-|-------|-------------|----------|
-| Session ID | Identifier les sessions distinctes | P2 |
-| Historique cross-session | Acceder aux chunks d'autres sessions | P2 |
-| Definition "session" | Par jour / projet / contexte ? | P2 |
+**Objectif** : Organiser les chunks par projet/domaine pour navigation cross-session.
+
+| Sous-phase | Description | Statut |
+|------------|-------------|--------|
+| **5.5a** | Format ID enrichi + detection projet | EN COURS |
+| **5.5b** | Sessions tracking + tools | A FAIRE |
+| **5.5c** | Cross-session queries (@syntax) | A FAIRE |
+
+**Nouveau format ID** : `{date}_{project}_{seq}[_{ticket}][_{domain}]`
+- Exemple : `2026-01-18_RLM_001_r&d`
+- Exemple : `2026-01-18_JoyJuice_005_TIC-123_bp`
+
+**Decisions validees** :
+- Chunks existants restent en format 1.0 (backward compat)
+- Domaines flexibles (pas de validation stricte)
+- Detection auto projet via git root ou cwd
+
+**Nouveaux tools** :
+| Tool | Description |
+|------|-------------|
+| `rlm_sessions` | Lister sessions par projet/domaine |
+| `rlm_domains` | Lister domaines suggeres |
+
+**Fichiers a creer** :
+- `sessions.py` - Gestion sessions
+- `sessions.json` - Index des sessions
+- `domains.json` - Domaines suggeres
 
 ### 5.6 Export et backup
 

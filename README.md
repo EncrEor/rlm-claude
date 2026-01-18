@@ -132,11 +132,22 @@ cp templates/skills/rlm-analyze/skill.md ~/.claude/skills/rlm-analyze/
 | `rlm_grep` | Chercher un pattern regex dans tous les chunks |
 | `rlm_list_chunks` | Lister les chunks disponibles avec metadonnees |
 
-### Phase 5 - Search (BM25)
+### Phase 5.1 - Search (BM25)
 
 | Tool | Description |
 |------|-------------|
 | `rlm_search` | Recherche BM25 par pertinence (FR/EN, accents normalises) |
+
+### Phase 5.5 - Multi-sessions (EN COURS)
+
+| Tool | Description |
+|------|-------------|
+| `rlm_sessions` | Lister sessions par projet/domaine |
+| `rlm_domains` | Lister domaines suggeres |
+
+**Nouveau format chunk ID** : `{date}_{project}_{seq}[_{ticket}][_{domain}]`
+- Exemple : `2026-01-18_RLM_001_r&d`
+- Backward compat : chunks existants restent accessibles
 
 ---
 
@@ -246,12 +257,13 @@ rlm_status()
 ```
 RLM/
 ├── mcp_server/
-│   ├── server.py              # Serveur MCP (9 tools)
+│   ├── server.py              # Serveur MCP (11 tools)
 │   └── tools/
 │       ├── memory.py          # Phase 1 (insights)
-│       ├── navigation.py      # Phase 2 (chunks)
-│       ├── tokenizer_fr.py    # Phase 5 (tokenization FR/EN)
-│       └── search.py          # Phase 5 (BM25 search)
+│       ├── navigation.py      # Phase 2 + 5.5 (chunks)
+│       ├── tokenizer_fr.py    # Phase 5.1 (tokenization FR/EN)
+│       ├── search.py          # Phase 5.1 (BM25 search)
+│       └── sessions.py        # Phase 5.5 (sessions, domains)
 │
 ├── hooks/                     # Phase 3 (auto-chunking)
 │   ├── auto_chunk_check.py    # Hook Stop - detection
@@ -268,7 +280,9 @@ RLM/
 │
 ├── context/                   # Stockage (cree a l'install)
 │   ├── session_memory.json    # Insights stockes
-│   ├── index.json             # Index des chunks
+│   ├── index.json             # Index des chunks (v2.1.0)
+│   ├── sessions.json          # Index des sessions (Phase 5.5)
+│   ├── domains.json           # Domaines suggeres (Phase 5.5)
 │   └── chunks/                # Historique decoupe
 │
 ├── install.sh                 # Script installation
@@ -362,7 +376,7 @@ ls ~/.claude/skills/rlm-analyze/
   - [x] 5.1 : BM25 search (rlm_search)
   - [ ] 5.2 : Fuzzy grep
   - [x] 5.3 : Sub-agents paralleles (/rlm-parallel)
-  - [ ] 5.5 : Multi-sessions
+  - [ ] **5.5 : Multi-sessions (EN COURS)**
   - [ ] 5.6 : Retention (archive/purge)
 
 Voir [ROADMAP.md](ROADMAP.md) pour les details.
@@ -402,4 +416,4 @@ MIT License - voir [LICENSE](LICENSE)
 
 ---
 
-**Derniere mise a jour** : 2026-01-18 (Phase 5.3 - Sub-agents paralleles)
+**Derniere mise a jour** : 2026-01-18 (Phase 5.5 - Multi-sessions en cours)

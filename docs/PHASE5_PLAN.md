@@ -2,7 +2,20 @@
 
 > **Document de planification R&D** - A valider avant implementation
 > **Auteurs** : Ahmed + Claude (session 2026-01-18)
-> **Statut** : DRAFT COMPLET - Pret pour review
+> **Statut** : IMPLEMENTATION EN COURS - Phase 5.5
+
+---
+
+## Avancement Phase 5
+
+| Sous-phase | Description | Statut |
+|------------|-------------|--------|
+| **5.1** | BM25 Ranking | FAIT |
+| **5.2** | Grep Optimise | A FAIRE |
+| **5.3** | Sub-agents Paralleles | FAIT |
+| **5.4** | Embeddings (backup) | OPTIONNEL |
+| **5.5** | Multi-sessions | EN COURS |
+| **5.6** | Retention | A FAIRE |
 
 ---
 
