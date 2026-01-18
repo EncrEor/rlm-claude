@@ -1,0 +1,26 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ~/.claude/rlm/hooks/auto_chunk_check.py"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "mcp__rlm-server__rlm_chunk",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ~/.claude/rlm/hooks/reset_chunk_counter.py"
+          }
+        ]
+      }
+    ]
+  }
+}
