@@ -139,7 +139,28 @@ RLM/
 - Installation en une commande (`./install.sh`)
 - Zero intervention humaine pour la gestion memoire
 
-### Phase 4+ (A venir)
+### Phase 4 : Production - VALIDEE (2026-01-18)
+
+| Tache | Statut |
+|-------|--------|
+| `_auto_summarize()` - generation auto de resume | OK |
+| `_content_hash()` - hash MD5 normalise | OK |
+| `_check_duplicate()` - detection doublons | OK |
+| `_increment_access()` - compteur d'acces | OK |
+| Mise a jour `chunk()` avec Phase 4 | OK |
+| Mise a jour `peek()` avec tracking | OK |
+| Mise a jour `list_chunks()` avec metrics | OK |
+| Mise a jour `rlm_status()` avec stats usage | OK |
+| Tests valides | OK |
+| GitHub push | OK |
+
+**Nouveautes Phase 4** :
+- Auto-summarization : Resume genere si non fourni (premiere ligne)
+- Deduplication : Hash MD5 du contenu normalise evite les doublons
+- Access tracking : Compteur d'acces et `last_accessed` pour chaque chunk
+- Stats usage : `rlm_status()` affiche les chunks les plus accedes
+
+### Phase 5 (A venir)
 
 Voir [ROADMAP.md](ROADMAP.md) pour les details.
 

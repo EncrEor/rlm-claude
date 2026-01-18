@@ -12,7 +12,7 @@
 | **Phase 1** | VALIDEE | Memory tools (remember/recall/forget/status) |
 | **Phase 2** | VALIDEE | Navigation tools (chunk/peek/grep/list) |
 | **Phase 3** | VALIDEE | Auto-chunking + Skill /rlm-analyze |
-| **Phase 4** | A FAIRE | Production (resumes auto, optimisations) |
+| **Phase 4** | VALIDEE | Production (auto-summary, dedup, access tracking) |
 | **Phase 5** | A FAIRE | Avance (embeddings, multi-sessions) |
 
 ---
