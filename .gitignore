@@ -24,6 +24,8 @@ Thumbs.db
 context/chunks/*.md
 context/session_memory.json
 context/index.json
+context/domains.json
+context/sessions.json
 logs/
 *.log
 

@@ -37,18 +37,29 @@ def _save_sessions(data: dict) -> None:
 
 
 def _load_domains() -> dict:
-    """Load domains configuration from disk."""
-    if not DOMAINS_FILE.exists():
-        return {
-            "version": "1.0.0",
-            "description": "No domains file found",
-            "domains": {
-                "default": {
-                    "description": "Default domains",
-                    "list": ["dev", "research", "planning", "debug", "test", "docs"]
-                }
+    """Load domains configuration from disk. Creates default if not exists."""
+    default_domains = {
+        "version": "1.0.0",
+        "description": "Suggested domains for RLM chunks. You can use any domain - these are just suggestions.",
+        "domains": {
+            "default": {
+                "description": "Generic domains for any project",
+                "list": [
+                    "dev", "research", "planning", "debug", "test",
+                    "docs", "review", "deploy", "feature", "bugfix",
+                    "refactor", "meeting", "decision"
+                ]
             }
-        }
+        },
+        "_note": "Customize this file for your project. See domains.json.example for an extended example."
+    }
+
+    if not DOMAINS_FILE.exists():
+        # Create default domains file
+        DOMAINS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        with open(DOMAINS_FILE, "w", encoding="utf-8") as f:
+            json.dump(default_domains, f, indent=2, ensure_ascii=False)
+        return default_domains
 
     with open(DOMAINS_FILE, "r", encoding="utf-8") as f:
         return json.load(f)
