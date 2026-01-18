@@ -9,8 +9,14 @@ Phase 2 tools:
 - peek: View portion of a chunk
 - grep: Search pattern across chunks
 - list_chunks: List all available chunks
+
+Phase 4 additions:
+- Auto-summarization when no summary provided
+- Duplicate detection via content hash
+- Access counting for chunks
 """
 
+import hashlib
 import json
 import re
 from datetime import datetime
@@ -62,6 +68,100 @@ def _estimate_tokens(text: str) -> int:
     return len(text) // 4
 
 
+# =============================================================================
+# PHASE 4: Auto-summarization, Deduplication, Access Tracking
+# =============================================================================
+
+def _auto_summarize(content: str, max_length: int = 100) -> str:
+    """
+    Generate automatic summary from content (Phase 4.1).
+
+    Extracts the first non-empty line as summary.
+    If too long, truncates with ellipsis.
+
+    Args:
+        content: The text content to summarize
+        max_length: Maximum length for summary (default: 100)
+
+    Returns:
+        Generated summary string
+    """
+    lines = [line.strip() for line in content.split('\n') if line.strip()]
+
+    if not lines:
+        return "Empty content"
+
+    # Take first meaningful line
+    first_line = lines[0]
+
+    # Skip markdown headers for better summary
+    if first_line.startswith('#'):
+        first_line = first_line.lstrip('#').strip()
+
+    # Truncate if too long
+    if len(first_line) > max_length:
+        return first_line[:max_length - 3] + "..."
+
+    return first_line
+
+
+def _content_hash(content: str) -> str:
+    """
+    Generate hash of normalized content for duplicate detection (Phase 4.2).
+
+    Normalizes whitespace and lowercases before hashing to catch
+    near-duplicates.
+
+    Args:
+        content: The text content to hash
+
+    Returns:
+        MD5 hash of normalized content (32 chars)
+    """
+    # Normalize: lowercase, collapse whitespace
+    normalized = ' '.join(content.lower().split())
+    return hashlib.md5(normalized.encode()).hexdigest()
+
+
+def _check_duplicate(content_hash: str) -> dict | None:
+    """
+    Check if content with this hash already exists (Phase 4.2).
+
+    Args:
+        content_hash: MD5 hash of normalized content
+
+    Returns:
+        Existing chunk info if duplicate found, None otherwise
+    """
+    index = _load_index()
+
+    for chunk_info in index.get("chunks", []):
+        if chunk_info.get("content_hash") == content_hash:
+            return chunk_info
+
+    return None
+
+
+def _increment_access(chunk_id: str) -> None:
+    """
+    Increment access counter for a chunk (Phase 4.3).
+
+    Updates both access_count and last_accessed timestamp.
+
+    Args:
+        chunk_id: ID of the chunk being accessed
+    """
+    index = _load_index()
+
+    for chunk_info in index.get("chunks", []):
+        if chunk_info["id"] == chunk_id:
+            chunk_info["access_count"] = chunk_info.get("access_count", 0) + 1
+            chunk_info["last_accessed"] = datetime.now().isoformat()
+            break
+
+    _save_index(index)
+
+
 def _generate_chunk_id() -> str:
     """Generate a unique chunk ID based on date and sequence."""
     today = datetime.now().strftime("%Y-%m-%d")
@@ -88,15 +188,36 @@ def chunk(
     Use this to externalize parts of the conversation that you might need
     to reference later but don't need in active context.
 
+    Phase 4 enhancements:
+    - Auto-generates summary if not provided
+    - Detects duplicate content via hash
+    - Stores content hash for future duplicate checks
+
     Args:
         content: The text content to save as a chunk
-        summary: Brief description of what this chunk contains (recommended)
+        summary: Brief description of what this chunk contains (auto-generated if empty)
         tags: Keywords for easier retrieval
 
     Returns:
-        Dictionary with chunk_id and confirmation
+        Dictionary with chunk_id and confirmation, or duplicate status
     """
     CHUNKS_DIR.mkdir(parents=True, exist_ok=True)
+
+    # Phase 4.2: Check for duplicates
+    content_hash = _content_hash(content)
+    existing = _check_duplicate(content_hash)
+
+    if existing:
+        return {
+            "status": "duplicate",
+            "existing_chunk_id": existing["id"],
+            "existing_summary": existing.get("summary", ""),
+            "message": f"Content already exists in chunk {existing['id']}"
+        }
+
+    # Phase 4.1: Auto-generate summary if not provided
+    if not summary:
+        summary = _auto_summarize(content)
 
     chunk_id = _generate_chunk_id()
     chunk_file = CHUNKS_DIR / f"{chunk_id}.md"
@@ -105,10 +226,11 @@ def chunk(
     # Create chunk file with metadata header
     header = f"""---
 id: {chunk_id}
-summary: {summary or 'No summary provided'}
+summary: {summary}
 tags: {', '.join(tags or [])}
 created_at: {datetime.now().isoformat()}
 tokens_estimate: {tokens}
+content_hash: {content_hash}
 ---
 
 """
@@ -121,9 +243,12 @@ tokens_estimate: {tokens}
     index["chunks"].append({
         "id": chunk_id,
         "file": f"chunks/{chunk_id}.md",
-        "summary": summary or "No summary provided",
+        "summary": summary,
         "tags": tags or [],
         "tokens_estimate": tokens,
+        "content_hash": content_hash,
+        "access_count": 0,
+        "last_accessed": None,
         "created_at": datetime.now().isoformat()
     })
     index["total_tokens_estimate"] = sum(c["tokens_estimate"] for c in index["chunks"])
@@ -133,6 +258,7 @@ tokens_estimate: {tokens}
         "status": "created",
         "chunk_id": chunk_id,
         "tokens_estimate": tokens,
+        "summary": summary,
         "message": f"Chunk {chunk_id} created ({tokens} tokens estimated)"
     }
 
@@ -147,6 +273,8 @@ def peek(
 
     Use this to view the contents of a previously saved chunk.
     Can read the whole chunk or just a portion (by line numbers).
+
+    Phase 4.3: Increments access counter on successful read.
 
     Args:
         chunk_id: ID of the chunk to read
@@ -185,6 +313,9 @@ def peek(
         end = len(content_lines)
 
     selected_lines = content_lines[start:end]
+
+    # Phase 4.3: Track access
+    _increment_access(chunk_id)
 
     return {
         "status": "success",
@@ -306,7 +437,10 @@ def list_chunks(limit: int = 20) -> dict:
                 "summary": c.get("summary", "No summary"),
                 "tags": c.get("tags", []),
                 "tokens": c.get("tokens_estimate", 0),
-                "created": c.get("created_at", "")[:16]
+                "created": c.get("created_at", "")[:16],
+                # Phase 4.3: Access metrics
+                "access_count": c.get("access_count", 0),
+                "last_accessed": c.get("last_accessed", "")[:16] if c.get("last_accessed") else None
             }
             for c in chunks_sorted
         ]

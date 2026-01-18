@@ -121,6 +121,7 @@ def rlm_status() -> str:
     Get current status of the RLM memory system.
 
     Returns statistics about stored insights, chunks, and system health.
+    Phase 4 addition: Shows chunk access metrics.
     """
     # Memory stats (Phase 1)
     mem_result = memory_status()
@@ -130,6 +131,29 @@ def rlm_status() -> str:
     # Chunks stats (Phase 2)
     chunks_result = list_chunks(limit=1000)  # Get all chunks for accurate count
 
+    # Phase 4.3: Access metrics
+    total_accesses = 0
+    most_accessed = []
+
+    for c in chunks_result.get("chunks", []):
+        access_count = c.get("access_count", 0)
+        total_accesses += access_count
+        if access_count > 0:
+            most_accessed.append((c["id"], c.get("summary", "")[:30], access_count))
+
+    # Sort by access count and take top 3
+    most_accessed.sort(key=lambda x: x[2], reverse=True)
+    top_accessed = most_accessed[:3]
+
+    # Build access stats string
+    access_stats = ""
+    if top_accessed:
+        access_stats = "\n  Most accessed:\n"
+        for chunk_id, summary, count in top_accessed:
+            access_stats += f"    - {chunk_id}: {count}x ({summary}...)\n"
+    elif chunks_result['total_chunks'] > 0:
+        access_stats = "\n  No chunks accessed yet\n"
+
     return (
         f"RLM Memory Status (v{mem_result['version']})\n"
         f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
@@ -137,6 +161,7 @@ def rlm_status() -> str:
         f"  By category: {categories_str}\n"
         f"  By importance: {importance_str}\n"
         f"Chunks: {chunks_result['total_chunks']} (~{chunks_result['total_tokens_estimate']} tokens)\n"
+        f"  Total accesses: {total_accesses}{access_stats}"
         f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
         f"Created: {mem_result['created_at'][:16] if mem_result['created_at'] else 'N/A'}\n"
         f"Last updated: {mem_result['last_updated'][:16] if mem_result['last_updated'] else 'never'}"
@@ -161,9 +186,13 @@ def rlm_chunk(
     long conversations by keeping important history accessible without
     loading it into the main context window.
 
+    Phase 4 enhancements:
+    - Auto-generates summary if not provided
+    - Detects duplicate content and returns existing chunk ID
+
     Args:
         content: The text content to save as a chunk (conversation history, notes, etc.)
-        summary: Brief description of what this chunk contains (highly recommended)
+        summary: Brief description of what this chunk contains (auto-generated if empty)
         tags: Comma-separated keywords for easier retrieval (e.g., "bp,scenario,2026")
 
     Returns:
@@ -171,7 +200,17 @@ def rlm_chunk(
     """
     tags_list = [t.strip() for t in tags.split(",") if t.strip()] if tags else []
     result = chunk(content, summary, tags_list)
-    return f"✓ {result['message']}"
+
+    # Phase 4.2: Handle duplicate detection
+    if result["status"] == "duplicate":
+        return (
+            f"⚠ Duplicate content detected!\n"
+            f"  Existing chunk: {result['existing_chunk_id']}\n"
+            f"  Summary: {result['existing_summary']}"
+        )
+
+    # Include auto-generated summary in response
+    return f"✓ {result['message']}\n  Summary: {result.get('summary', 'N/A')}"
 
 
 @mcp.tool()
