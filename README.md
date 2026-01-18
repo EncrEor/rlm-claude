@@ -182,10 +182,17 @@ rlm_chunk("Discussion sur le business plan... [contenu long]",
           summary="BP Joy Juice - Scenarios REA",
           tags="bp,scenario,2026")
 
-# Voir ce qui est stocke
+# Phase 4: Auto-summary si pas de summary fourni
+rlm_chunk("Mon contenu ici...", tags="auto")
+# → Summary auto-genere depuis la premiere ligne
+
+# Phase 4: Detection des doublons
+rlm_chunk("Meme contenu...")  # → "Duplicate detected"
+
+# Voir ce qui est stocke (avec access_count Phase 4)
 rlm_list_chunks()
 
-# Lire un chunk specifique
+# Lire un chunk specifique (incremente access_count)
 rlm_peek("2026-01-18_001")
 
 # Chercher dans l'historique
@@ -339,7 +346,7 @@ ls ~/.claude/skills/rlm-analyze/
 - [x] **Phase 1** : Memory tools (remember/recall/forget/status)
 - [x] **Phase 2** : Navigation tools (chunk/peek/grep/list)
 - [x] **Phase 3** : Auto-chunking + Skill /rlm-analyze
-- [ ] **Phase 4** : Production (resumes auto, optimisations)
+- [x] **Phase 4** : Production (auto-summary, dedup, access tracking)
 - [ ] **Phase 5** : Avance (embeddings, multi-sessions)
 
 Voir [ROADMAP.md](ROADMAP.md) pour les details.
@@ -379,4 +386,4 @@ MIT License - voir [LICENSE](LICENSE)
 
 ---
 
-**Derniere mise a jour** : 2026-01-18 (Phase 3 validee)
+**Derniere mise a jour** : 2026-01-18 (Phase 4 validee)

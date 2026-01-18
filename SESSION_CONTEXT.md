@@ -1,7 +1,7 @@
 # RLM - Contexte de Session
 
 > **Fichier de reprise** : A lire au debut de chaque session pour restaurer le contexte complet.
-> **Derniere MAJ** : 2026-01-18 (Phase 3 validee)
+> **Derniere MAJ** : 2026-01-18 (Phase 4 validee)
 
 ---
 
@@ -160,9 +160,18 @@ RLM/
 - Access tracking : Compteur d'acces et `last_accessed` pour chaque chunk
 - Stats usage : `rlm_status()` affiche les chunks les plus accedes
 
-**Bug fix Phase 3** :
+**Bug fixes** :
 - Hook `Stop` ne supporte PAS les matchers → retirer `"matcher": "*"`
-- Fix applique dans `~/.claude/settings.json` et `templates/hooks_settings.json`
+- Hook `Stop` format JSON : utiliser `systemMessage` (pas `hookSpecificOutput.additionalContext`)
+- Fix applique dans `~/.claude/rlm/hooks/auto_chunk_check.py`
+
+**Tests Phase 4 valides** :
+```
+rlm_chunk("contenu", tags="test")  → Auto-summary genere ✅
+rlm_chunk("meme contenu")          → Doublon detecte ✅
+rlm_peek("chunk_id")               → access_count incremente ✅
+rlm_status()                       → "Most accessed" affiche ✅
+```
 
 ### Phase 5 (A venir)
 
@@ -264,18 +273,24 @@ cd /Users/amx/Documents/Joy_Claude/RLM && git add . && git commit -m "message" &
 
 ## 8. Prochaine Action
 
-**Phase 4 : Production** - Prochaine etape du developpement RLM.
+**Phase 5 : Avance** - Prochaine etape du developpement RLM.
 
-A implementer :
-- Resumes automatiques (auto-summarization des chunks)
-- Optimisations (compression, deduplication)
-- Metrics d'usage (tokens, frequence)
+Options a considerer :
+- **5.1 Embeddings** : Recherche semantique (sentence-transformers + FAISS)
+- **5.2 Multi-sessions** : Acceder aux chunks d'autres sessions
+- **5.3 Export/Backup** : Sauvegarde automatique
+
+Phase 4 restante (P2/P3, optionnel) :
+- Compression des vieux chunks (gzip)
+- Archivage automatique
+- Dashboard visualisation
 
 **Pour tester les tools existants** :
 ```
-rlm_status()           -> Insights + Chunks stats
-rlm_list_chunks()      -> Liste des chunks disponibles
+rlm_status()           -> Insights + Chunks stats + Most accessed
+rlm_list_chunks()      -> Liste des chunks avec access_count
 rlm_recall()           -> Insights sauvegardes
+rlm_chunk("content")   -> Auto-summary + dedup
 /rlm-analyze chunk_id "question"  -> Analyser avec sub-agent
 ```
 

@@ -63,17 +63,15 @@ def main():
         minutes = int(time_since_last / 60)
 
         result = {
-            "hookSpecificOutput": {
-                "additionalContext": (
-                    f"AUTO-CHUNK REQUIS: {turns} tours depuis dernier chunk "
-                    f"({minutes} min). "
-                    "INSTRUCTIONS AUTOMATIQUES:\n"
-                    "1. Resume les points IMPORTANTS de cette conversation\n"
-                    "2. Appelle rlm_chunk(resume, summary='Session auto', tags='auto,session')\n"
-                    "3. Sauvegarde les decisions cles via rlm_remember()\n"
-                    "C'est AUTOMATIQUE - pas besoin de demander permission."
-                )
-            }
+            "systemMessage": (
+                f"AUTO-CHUNK REQUIS: {turns} tours depuis dernier chunk "
+                f"({minutes} min). "
+                "INSTRUCTIONS AUTOMATIQUES:\n"
+                "1. Resume les points IMPORTANTS de cette conversation\n"
+                "2. Appelle rlm_chunk(resume, summary='Session auto', tags='auto,session')\n"
+                "3. Sauvegarde les decisions cles via rlm_remember()\n"
+                "C'est AUTOMATIQUE - pas besoin de demander permission."
+            )
         }
         print(json.dumps(result))
 
