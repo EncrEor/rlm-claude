@@ -439,7 +439,7 @@ Preparer RLM pour distribution publique (PyPI) et adoption par la communaute.
 | Tests search (BM25) | P0 | A FAIRE |
 | Tests sessions | P0 | A FAIRE |
 | Coverage >= 80% | P0 | A FAIRE |
-| `.github/workflows/ci.yml` | P0 | FAIT |
+| `.github/workflows/ci.yml` | P0 | FAIT (poussé sur GitHub) |
 | `pyproject.toml` | P1 | FAIT |
 | `CHANGELOG.md` | P1 | FAIT |
 | Publication TestPyPI | P1 | A FAIRE |
@@ -454,10 +454,13 @@ RLM/
 ├── CHANGELOG.md                    # Historique retrospectif
 ├── pyproject.toml                  # Config moderne (remplace requirements.txt)
 ├── .github/workflows/ci.yml        # CI/CD GitHub Actions
+├── mcp_server/tools/retention.py   # Phase 5.6 (~420 LOC)
 └── tests/
     ├── __init__.py
     ├── conftest.py                 # Fixtures
-    ├── test_tokenizer.py           # Tests tokenizer (FAIT)
+    ├── test_tokenizer.py           # Tests tokenizer (18 tests)
+    ├── test_grep_fuzzy.py          # Tests fuzzy search (16 tests)
+    ├── test_retention.py           # Tests retention (20 tests)
     └── integration/
         └── __init__.py
 ```

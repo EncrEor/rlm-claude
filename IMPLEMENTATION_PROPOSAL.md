@@ -505,7 +505,7 @@ Après analyse, **MCP Server + Hooks** est l'approche la plus puissante et pére
 | 5.2 | Fuzzy grep (tolère typos) | ✅ FAIT (v0.6.1) |
 | 5.3 | Sub-agents parallèles | ✅ FAIT (/rlm-parallel) |
 | 5.5 | Multi-sessions | ✅ FAIT (sessions, domains) |
-| 5.6 | Retention (archive/purge) | ⏳ À FAIRE |
+| 5.6 | Retention (archive/purge) | ✅ FAIT (v0.7.0) |
 
 ### Phase 6 : Production-Ready - PROCHAINE
 
@@ -596,6 +596,6 @@ Tu disposes d'outils RLM pour naviguer dans le contexte étendu.
 
 ---
 
-**Version** : 2.1
+**Version** : 2.2
 **Date** : 2026-01-19
-**Statut** : Production - Phase 5.2 Fuzzy Grep complète
+**Statut** : Production - Phase 5.6 Retention complete (v0.7.0)

@@ -1207,11 +1207,11 @@ ruff format mcp_server/
 | Tests search (BM25, tokenizer) | P0 | A FAIRE |
 | Tests sessions | P0 | A FAIRE |
 | Coverage >= 80% | P0 | A FAIRE |
-| `.github/workflows/ci.yml` | P0 | A FAIRE |
-| `pyproject.toml` | P1 | A FAIRE |
+| `.github/workflows/ci.yml` | P0 | FAIT |
+| `pyproject.toml` | P1 | FAIT |
 | Publication TestPyPI | P1 | A FAIRE |
 | Publication PyPI | P1 | A FAIRE |
-| `CHANGELOG.md` | P1 | A FAIRE |
+| `CHANGELOG.md` | P1 | FAIT |
 | Badges README | P1 | A FAIRE |
 | Section Development README | P1 | A FAIRE |
 | Logging systeme | P2 | A FAIRE |
