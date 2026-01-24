@@ -1,5 +1,25 @@
 {
   "hooks": {
+    "PreCompact": [
+      {
+        "matcher": "manual",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ~/.claude/rlm/hooks/pre_compact_chunk.py"
+          }
+        ]
+      },
+      {
+        "matcher": "auto",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ~/.claude/rlm/hooks/pre_compact_chunk.py"
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [

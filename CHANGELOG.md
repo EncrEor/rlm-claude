@@ -12,6 +12,40 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ---
 
+## [0.8.0] - 2026-01-24 - Hook PreCompact + Context-aware
+
+### Added
+- `pre_compact_chunk.py` - Hook PreCompact qui force chunk AVANT /compact ou auto-compact
+- Context-awareness: Hook Stop ne se déclenche QUE si contexte >= 55%
+- Seuils progressifs: 10 (📝 doux) / 20 (⚠️ insistant) / 30 (🛑 critique) tours
+- Affichage du % de contexte dans les messages de reminder
+- Documentation triggers manuels (décision, fin tâche, insight, changement sujet)
+
+### Changed
+- `auto_chunk_check.py` v3 - Lecture du contexte via stdin + seuils progressifs
+- Architecture hooks: PreCompact (principal) + Stop (backup) + PostToolUse (reset)
+
+### Configuration
+```json
+{
+  "hooks": {
+    "PreCompact": [
+      {"matcher": "manual", "hooks": [...]},
+      {"matcher": "auto", "hooks": [...]}
+    ],
+    "Stop": [...],
+    "PostToolUse": [...]
+  }
+}
+```
+
+### Philosophy
+- Chunk aux moments importants, pas sur des seuils arbitraires
+- PreCompact garantit la sauvegarde avant perte de contexte
+- Context-aware évite le bruit sur les petites conversations
+
+---
+
 ## [0.7.0] - 2026-01-19 - Phase 5.6 Retention
 
 ### Added
