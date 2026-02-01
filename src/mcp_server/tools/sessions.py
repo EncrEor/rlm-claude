@@ -7,12 +7,9 @@ Sessions group chunks by working context (project/domain/ticket).
 
 import json
 from datetime import datetime
-from pathlib import Path
 
-from .fileutil import atomic_write_json
+from .fileutil import CONTEXT_DIR, atomic_write_json
 
-# Paths
-CONTEXT_DIR = Path(__file__).parent.parent.parent / "context"
 SESSIONS_FILE = CONTEXT_DIR / "sessions.json"
 DOMAINS_FILE = CONTEXT_DIR / "domains.json"
 

@@ -5,6 +5,33 @@ All notable changes to RLM are documented here.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.1] - 2026-02-01
+
+### Changed — Phase 6: PyPI Distribution
+- Migrated to **src/ layout** (PyPA best practice)
+- Added `main()` entry point in `server.py`
+- Added `__init__.py` and `__main__.py` for `python -m mcp_server` support
+- Updated `install.sh` with pip vs git clone detection
+- CI: Enabled Trusted Publishers (OIDC) for PyPI publish on tag push
+- Removed redundant `mcp_server/requirements.txt` (pyproject.toml is source of truth)
+- Fixed all internal imports: `from tools.X` → `from mcp_server.tools.X`
+- Fixed test imports: removed `sys.path` hacks, use proper package imports
+- Added `dist/`, `build/`, `*.egg-info` to `.gitignore`
+
+### Backward compatibility
+- **Symlink** `mcp_server/server.py` → `src/mcp_server/server.py` for existing users
+- Existing installations keep working after `git pull` (no immediate breakage)
+- Recommended: re-run `./install.sh` to update the MCP server path
+
+### Install
+```bash
+# New install
+pip install mcp-rlm-server[all]
+
+# Upgrade from v0.9.0 (git users)
+cd rlm-claude && git pull && ./install.sh
+```
+
 ## [Unreleased]
 
 ### Added — Phase 7.2: Entity Extraction (COMPLETE)

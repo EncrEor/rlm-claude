@@ -10,13 +10,9 @@ Tests:
 """
 
 import json
-import sys
 from pathlib import Path
 
 import pytest
-
-# Add mcp_server to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent / "mcp_server"))
 
 
 class TestGrepFuzzyBasic:
@@ -36,7 +32,7 @@ class TestGrepFuzzyBasic:
         )
 
         # Patch the module paths
-        import tools.navigation as nav
+        import mcp_server.tools.navigation as nav
 
         monkeypatch.setattr(nav, "CONTEXT_DIR", self.context_dir)
         monkeypatch.setattr(nav, "CHUNKS_DIR", self.chunks_dir)
@@ -164,7 +160,7 @@ class TestGrepFuzzyFilters:
             json.dumps({"version": "2.1.0", "chunks": [], "total_tokens_estimate": 0}, indent=2)
         )
 
-        import tools.navigation as nav
+        import mcp_server.tools.navigation as nav
 
         monkeypatch.setattr(nav, "CONTEXT_DIR", self.context_dir)
         monkeypatch.setattr(nav, "CHUNKS_DIR", self.chunks_dir)
@@ -246,7 +242,7 @@ class TestGrepFuzzyIntegration:
             json.dumps({"version": "2.1.0", "chunks": [], "total_tokens_estimate": 0}, indent=2)
         )
 
-        import tools.navigation as nav
+        import mcp_server.tools.navigation as nav
 
         monkeypatch.setattr(nav, "CONTEXT_DIR", self.context_dir)
         monkeypatch.setattr(nav, "CHUNKS_DIR", self.chunks_dir)
@@ -320,7 +316,7 @@ class TestGrepFuzzyEdgeCases:
             json.dumps({"version": "2.1.0", "chunks": [], "total_tokens_estimate": 0}, indent=2)
         )
 
-        import tools.navigation as nav
+        import mcp_server.tools.navigation as nav
 
         monkeypatch.setattr(nav, "CONTEXT_DIR", self.context_dir)
         monkeypatch.setattr(nav, "CHUNKS_DIR", self.chunks_dir)
@@ -391,7 +387,7 @@ class TestRealWorldScenarios:
             json.dumps({"version": "2.1.0", "chunks": [], "total_tokens_estimate": 0}, indent=2)
         )
 
-        import tools.navigation as nav
+        import mcp_server.tools.navigation as nav
 
         monkeypatch.setattr(nav, "CONTEXT_DIR", self.context_dir)
         monkeypatch.setattr(nav, "CHUNKS_DIR", self.chunks_dir)

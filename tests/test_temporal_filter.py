@@ -10,13 +10,9 @@ Tests:
 """
 
 import json
-import sys
 from pathlib import Path
 
 import pytest
-
-# Add mcp_server to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent / "mcp_server"))
 
 
 class TestDateHelpers:
@@ -24,35 +20,35 @@ class TestDateHelpers:
 
     def test_parse_date_from_created_at(self):
         """Should extract date from created_at field."""
-        from tools.navigation import _parse_date_from_chunk
+        from mcp_server.tools.navigation import _parse_date_from_chunk
 
         chunk_info = {"id": "2026-01-25_RLM_001", "created_at": "2026-01-25T14:30:00"}
         assert _parse_date_from_chunk(chunk_info) == "2026-01-25"
 
     def test_parse_date_from_chunk_id_fallback(self):
         """Should fall back to chunk ID when created_at is missing."""
-        from tools.navigation import _parse_date_from_chunk
+        from mcp_server.tools.navigation import _parse_date_from_chunk
 
         chunk_info = {"id": "2026-01-18_001"}
         assert _parse_date_from_chunk(chunk_info) == "2026-01-18"
 
     def test_parse_date_empty_chunk(self):
         """Should return None for empty/invalid chunk info."""
-        from tools.navigation import _parse_date_from_chunk
+        from mcp_server.tools.navigation import _parse_date_from_chunk
 
         assert _parse_date_from_chunk({}) is None
         assert _parse_date_from_chunk({"id": "invalid"}) is None
 
     def test_chunk_in_range_no_filter(self):
         """No date filter should always return True."""
-        from tools.navigation import _chunk_in_date_range
+        from mcp_server.tools.navigation import _chunk_in_date_range
 
         chunk = {"id": "2026-01-18_001", "created_at": "2026-01-18T10:00:00"}
         assert _chunk_in_date_range(chunk, None, None) is True
 
     def test_chunk_in_range_date_from_only(self):
         """Filter with date_from only."""
-        from tools.navigation import _chunk_in_date_range
+        from mcp_server.tools.navigation import _chunk_in_date_range
 
         chunk_old = {"id": "2026-01-10_001", "created_at": "2026-01-10T10:00:00"}
         chunk_new = {"id": "2026-01-25_001", "created_at": "2026-01-25T10:00:00"}
@@ -62,7 +58,7 @@ class TestDateHelpers:
 
     def test_chunk_in_range_date_to_only(self):
         """Filter with date_to only."""
-        from tools.navigation import _chunk_in_date_range
+        from mcp_server.tools.navigation import _chunk_in_date_range
 
         chunk_old = {"id": "2026-01-10_001", "created_at": "2026-01-10T10:00:00"}
         chunk_new = {"id": "2026-01-25_001", "created_at": "2026-01-25T10:00:00"}
@@ -72,7 +68,7 @@ class TestDateHelpers:
 
     def test_chunk_in_range_both_dates(self):
         """Filter with both date_from and date_to."""
-        from tools.navigation import _chunk_in_date_range
+        from mcp_server.tools.navigation import _chunk_in_date_range
 
         chunk_before = {"id": "2026-01-10_001", "created_at": "2026-01-10T10:00:00"}
         chunk_inside = {"id": "2026-01-25_001", "created_at": "2026-01-25T10:00:00"}
@@ -84,7 +80,7 @@ class TestDateHelpers:
 
     def test_chunk_in_range_boundary_inclusive(self):
         """Boundaries should be inclusive."""
-        from tools.navigation import _chunk_in_date_range
+        from mcp_server.tools.navigation import _chunk_in_date_range
 
         chunk = {"id": "2026-01-25_001", "created_at": "2026-01-25T10:00:00"}
 
@@ -95,14 +91,14 @@ class TestDateHelpers:
 
     def test_chunk_in_range_inverted_returns_nothing(self):
         """Inverted range (from > to) should exclude everything."""
-        from tools.navigation import _chunk_in_date_range
+        from mcp_server.tools.navigation import _chunk_in_date_range
 
         chunk = {"id": "2026-01-25_001", "created_at": "2026-01-25T10:00:00"}
         assert _chunk_in_date_range(chunk, "2026-02-01", "2026-01-01") is False
 
     def test_chunk_in_range_invalid_date_format(self):
         """Invalid date format in filter should exclude chunk (fail-safe)."""
-        from tools.navigation import _chunk_in_date_range
+        from mcp_server.tools.navigation import _chunk_in_date_range
 
         chunk = {"id": "2026-01-25_001", "created_at": "2026-01-25T10:00:00"}
         # Malformed dates: still does string comparison, so "janvier" < "2026-..." → False
@@ -112,7 +108,7 @@ class TestDateHelpers:
 
     def test_parse_date_legacy_format_no_created_at(self):
         """Legacy format 1.0 chunks without created_at should use ID date."""
-        from tools.navigation import _parse_date_from_chunk
+        from mcp_server.tools.navigation import _parse_date_from_chunk
 
         # Format 1.0: no created_at in index (old chunks)
         chunk_info = {"id": "2026-01-18_001", "file": "chunks/2026-01-18_001.md"}
@@ -120,14 +116,14 @@ class TestDateHelpers:
 
     def test_parse_date_created_at_with_timezone(self):
         """created_at with timezone info should still parse date."""
-        from tools.navigation import _parse_date_from_chunk
+        from mcp_server.tools.navigation import _parse_date_from_chunk
 
         chunk_info = {"id": "2026-01-25_001", "created_at": "2026-01-25T14:30:00+01:00"}
         assert _parse_date_from_chunk(chunk_info) == "2026-01-25"
 
     def test_chunk_in_range_missing_created_at_uses_id(self):
         """Chunk without created_at should fall back to ID-based date."""
-        from tools.navigation import _chunk_in_date_range
+        from mcp_server.tools.navigation import _chunk_in_date_range
 
         chunk = {"id": "2026-01-25_001"}  # No created_at
         assert _chunk_in_date_range(chunk, "2026-01-20", "2026-01-30") is True
@@ -158,7 +154,7 @@ class TestGrepTemporalFilter:
         )
 
         # Patch module paths
-        import tools.navigation as nav
+        import mcp_server.tools.navigation as nav
 
         monkeypatch.setattr(nav, "CONTEXT_DIR", self.context_dir)
         monkeypatch.setattr(nav, "CHUNKS_DIR", self.chunks_dir)
@@ -299,7 +295,7 @@ class TestFuzzyTemporalFilter:
             )
         )
 
-        import tools.navigation as nav
+        import mcp_server.tools.navigation as nav
 
         monkeypatch.setattr(nav, "CONTEXT_DIR", self.context_dir)
         monkeypatch.setattr(nav, "CHUNKS_DIR", self.chunks_dir)
@@ -400,8 +396,8 @@ class TestSearchTemporalFilter:
         )
 
         # Patch search module paths
-        import tools.navigation as nav
-        import tools.search as search_mod
+        import mcp_server.tools.navigation as nav
+        import mcp_server.tools.search as search_mod
 
         monkeypatch.setattr(search_mod, "CONTEXT_DIR", self.context_dir)
         monkeypatch.setattr(search_mod, "CHUNKS_DIR", self.chunks_dir)

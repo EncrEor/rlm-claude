@@ -9,12 +9,9 @@ by offloading to persistent storage.
 import hashlib
 import json
 from datetime import datetime
-from pathlib import Path
 
-from .fileutil import atomic_write_json
+from .fileutil import CONTEXT_DIR, atomic_write_json
 
-# Path to session memory file (relative to RLM root)
-CONTEXT_DIR = Path(__file__).parent.parent.parent / "context"
 MEMORY_FILE = CONTEXT_DIR / "session_memory.json"
 
 

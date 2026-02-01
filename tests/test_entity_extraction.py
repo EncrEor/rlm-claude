@@ -6,13 +6,9 @@ and entity filtering in grep/search.
 """
 
 import json
-import sys
 from pathlib import Path
 
 import pytest
-
-# Add project root to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from mcp_server.tools.navigation import (
     _entity_matches,

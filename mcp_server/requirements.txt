@@ -1,6 +1,0 @@
-# RLM MCP Server Dependencies
-mcp>=1.0.0
-pydantic>=2.0.0
-
-# Phase 5.1: BM25 Search
-bm25s>=0.2.0

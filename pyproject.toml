@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mcp-rlm-server"
-version = "0.9.0"
+version = "0.9.1"
 description = "Infinite memory for Claude Code - MCP server inspired by MIT RLM paper"
 readme = "README.md"
 license = "MIT"
@@ -67,11 +67,11 @@ Issues = "https://github.com/EncrEor/rlm-claude/issues"
 Changelog = "https://github.com/EncrEor/rlm-claude/blob/main/CHANGELOG.md"
 
 [tool.hatch.build.targets.wheel]
-packages = ["mcp_server"]
+packages = ["src/mcp_server"]
 
 [tool.hatch.build.targets.sdist]
 include = [
-    "/mcp_server",
+    "/src/mcp_server",
     "/hooks",
     "/templates",
     "/README.md",
@@ -96,10 +96,10 @@ markers = [
 ]
 
 [tool.coverage.run]
-source = ["mcp_server"]
+source = ["src/mcp_server"]
 branch = true
 omit = [
-    "mcp_server/__main__.py",
+    "src/mcp_server/__main__.py",
     "tests/*",
 ]
 

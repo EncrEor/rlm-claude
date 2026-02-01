@@ -25,6 +25,7 @@ from datetime import datetime
 from pathlib import Path
 
 from .fileutil import (
+    CONTEXT_DIR,
     MAX_CHUNK_CONTENT_SIZE,
     atomic_write_json,
     atomic_write_text,
@@ -42,8 +43,6 @@ except ImportError:
     FUZZY_AVAILABLE = False
 
 
-# Paths
-CONTEXT_DIR = Path(__file__).parent.parent.parent / "context"
 CHUNKS_DIR = CONTEXT_DIR / "chunks"
 ARCHIVE_DIR = CONTEXT_DIR / "archive"
 INDEX_FILE = CONTEXT_DIR / "index.json"

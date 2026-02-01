@@ -1,7 +1,7 @@
 # RLM - Roadmap
 
 > Pistes futures pour RLM - Memoire infinie pour Claude Code
-> **Derniere MAJ** : 2026-01-24 (v0.9.0 - Systeme Simplifie)
+> **Derniere MAJ** : 2026-02-01 (v0.9.1 - PyPI Distribution)
 
 ---
 
@@ -14,7 +14,7 @@
 | **Phase 3** | VALIDEE (v0.9.0) | Auto-chunking simplifie (PreCompact + user-driven) |
 | **Phase 4** | VALIDEE | Production (auto-summary, dedup, access tracking) |
 | **Phase 5** | VALIDEE | Avance (BM25, fuzzy, multi-sessions, retention) |
-| **Phase 6** | EN COURS | Production-Ready (tests, CI/CD, PyPI) |
+| **Phase 6** | VALIDÉE | Production-Ready (tests, CI/CD, PyPI) |
 | **Phase 7** | VALIDÉE | MAGMA-Inspired (filtre temporel + extraction entités) |
 
 ---

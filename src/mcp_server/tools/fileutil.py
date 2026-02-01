@@ -19,6 +19,42 @@ from pathlib import Path
 # Blocks path traversal sequences like "../" or absolute paths
 CHUNK_ID_PATTERN = re.compile(r"^[\w.&-]+$")
 
+
+def resolve_context_dir() -> Path:
+    """Resolve the context directory for RLM storage.
+
+    Strategy (first match wins):
+    1. ~/.claude/rlm/context/ if it has data (chunks/ non-empty or index.json exists with chunks)
+    2. Project root context/ (git clone layout: walk up from this file to find context/)
+    3. ~/.claude/rlm/context/ as fallback (fresh install)
+    """
+    # Option 1: User-level storage with existing data
+    user_dir = Path.home() / ".claude" / "rlm" / "context"
+    if user_dir.exists():
+        index = user_dir / "index.json"
+        if index.exists():
+            try:
+                data = json.loads(index.read_text())
+                if data.get("chunks"):
+                    return user_dir
+            except (json.JSONDecodeError, OSError):
+                pass
+
+    # Option 2: Project-root context/ (git clone with src/ layout)
+    # __file__ = .../src/mcp_server/tools/fileutil.py → 4 parents up = project root
+    project_root = Path(__file__).resolve().parent.parent.parent.parent
+    project_context = project_root / "context"
+    if project_context.exists():
+        return project_context
+
+    # Option 3: Fallback to user-level (fresh install or pip install)
+    user_dir.mkdir(parents=True, exist_ok=True)
+    return user_dir
+
+
+# Shared resolved context directory
+CONTEXT_DIR = resolve_context_dir()
+
 # Maximum sizes
 MAX_CHUNK_CONTENT_SIZE = 2 * 1024 * 1024  # 2 MB
 MAX_DECOMPRESSED_SIZE = 10 * 1024 * 1024  # 10 MB

@@ -8,13 +8,7 @@ Tests:
 - Compound word splitting
 """
 
-import sys
-from pathlib import Path
-
-# Add mcp_server to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent / "mcp_server"))
-
-from tools.tokenizer_fr import normalize_accent, tokenize_fr
+from mcp_server.tools.tokenizer_fr import normalize_accent, tokenize_fr
 
 
 class TestNormalizeAccent:

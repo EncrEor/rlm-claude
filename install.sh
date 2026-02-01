@@ -129,9 +129,14 @@ echo "[4/7] Configuration du serveur MCP..."
 if command -v claude &> /dev/null; then
     # Remove existing if any
     claude mcp remove rlm-server 2>/dev/null || true
-    # Add new
-    claude mcp add rlm-server -s user -- python3 "$SCRIPT_DIR/mcp_server/server.py"
-    echo "  OK - Serveur MCP configure"
+    # Detect: pip install vs git clone
+    if python3 -c "import mcp_server" 2>/dev/null; then
+        MCP_CMD="python3 -m mcp_server"
+    else
+        MCP_CMD="python3 $SCRIPT_DIR/src/mcp_server/server.py"
+    fi
+    claude mcp add rlm-server -s user -- $MCP_CMD
+    echo "  OK - Serveur MCP configure ($MCP_CMD)"
 else
     echo "  SKIP - Claude CLI non trouve (configurer manuellement)"
 fi

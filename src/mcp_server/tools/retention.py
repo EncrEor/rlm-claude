@@ -17,12 +17,15 @@ Retention Rules:
 import gzip
 import json
 from datetime import datetime, timedelta
-from pathlib import Path
 
-from .fileutil import MAX_DECOMPRESSED_SIZE, atomic_write_json, safe_path, validate_chunk_id
+from .fileutil import (
+    CONTEXT_DIR,
+    MAX_DECOMPRESSED_SIZE,
+    atomic_write_json,
+    safe_path,
+    validate_chunk_id,
+)
 
-# Paths - same base as navigation.py
-CONTEXT_DIR = Path(__file__).parent.parent.parent / "context"
 CHUNKS_DIR = CONTEXT_DIR / "chunks"
 ARCHIVE_DIR = CONTEXT_DIR / "archive"
 INDEX_FILE = CONTEXT_DIR / "index.json"

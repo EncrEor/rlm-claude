@@ -22,10 +22,9 @@ try:
 except ImportError:
     BM25_AVAILABLE = False
 
+from .fileutil import CONTEXT_DIR
 from .tokenizer_fr import tokenize_fr
 
-# Paths (same as navigation.py)
-CONTEXT_DIR = Path(__file__).parent.parent.parent / "context"
 CHUNKS_DIR = CONTEXT_DIR / "chunks"
 
 

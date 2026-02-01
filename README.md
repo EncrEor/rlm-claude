@@ -35,6 +35,14 @@ You: "What did we decide about the API architecture?"
 
 ## Quick Install
 
+### Via PyPI (recommended)
+
+```bash
+pip install mcp-rlm-server[all]
+```
+
+### Via Git
+
 ```bash
 git clone https://github.com/EncrEor/rlm-claude.git
 cd rlm-claude
@@ -44,6 +52,18 @@ cd rlm-claude
 Restart Claude Code. Done.
 
 **Requirements**: Python 3.10+, Claude Code CLI
+
+### Upgrading from v0.9.0 or earlier
+
+v0.9.1 moved the source code from `mcp_server/` to `src/mcp_server/` (PyPA best practice). A compatibility symlink is included so existing installations keep working, but we recommend re-running the installer:
+
+```bash
+cd rlm-claude
+git pull
+./install.sh          # reconfigures the MCP server path
+```
+
+Your data (`~/.claude/rlm/`) is untouched. Only the server path is updated.
 
 ---
 
@@ -186,7 +206,7 @@ rlm_sessions(project="MyApp")
 
 ```
 rlm-claude/
-├── mcp_server/
+├── src/mcp_server/
 │   ├── server.py              # MCP server (14 tools)
 │   └── tools/
 │       ├── memory.py          # Insights (remember/recall/forget)
@@ -270,8 +290,8 @@ Edit `context/domains.json` after installation.
 If you prefer to install manually:
 
 ```bash
-pip install -r mcp_server/requirements.txt
-claude mcp add rlm-server -- python3 $(pwd)/mcp_server/server.py
+pip install -e ".[all]"
+claude mcp add rlm-server -- python3 -m mcp_server
 mkdir -p ~/.claude/rlm/hooks
 cp hooks/*.py ~/.claude/rlm/hooks/
 chmod +x ~/.claude/rlm/hooks/*.py
@@ -314,7 +334,7 @@ All I/O safety primitives are centralized in `mcp_server/tools/fileutil.py`.
 ```bash
 claude mcp list                    # Check servers
 claude mcp remove rlm-server       # Remove if exists
-claude mcp add rlm-server -- python3 /path/to/mcp_server/server.py
+claude mcp add rlm-server -- python3 -m mcp_server
 ```
 
 ### "Hooks not working"
@@ -333,7 +353,7 @@ ls ~/.claude/rlm/hooks/                                  # Check installed hooks
 - [x] **Phase 3**: Auto-chunking + sub-agent skills
 - [x] **Phase 4**: Production (auto-summary, dedup, access tracking)
 - [x] **Phase 5**: Advanced (BM25 search, fuzzy grep, multi-sessions, retention)
-- [ ] **Phase 6**: Production-ready (tests, CI/CD, PyPI)
+- [x] **Phase 6**: Production-ready (tests, CI/CD, PyPI)
 
 ---
 

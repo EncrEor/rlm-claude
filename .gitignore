@@ -29,6 +29,12 @@ context/sessions.json
 logs/
 *.log
 
+# Build artifacts
+dist/
+build/
+*.egg-info/
+src/*.egg-info/
+
 # Test artifacts
 .pytest_cache/
 .coverage
