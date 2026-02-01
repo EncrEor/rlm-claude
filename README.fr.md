@@ -4,7 +4,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-[English](README.md) | Français
+[English](README.md) | Français | [日本語](README.ja.md)
 
 ---
 

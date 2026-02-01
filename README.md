@@ -6,7 +6,7 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![MCP Server](https://img.shields.io/badge/MCP-Server-green.svg)](https://modelcontextprotocol.io)
 
-[Fran&ccedil;ais](README.fr.md) | English
+[Fran&ccedil;ais](README.fr.md) | English | [日本語](README.ja.md)
 
 ---
 
