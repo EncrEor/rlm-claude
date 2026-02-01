@@ -24,18 +24,14 @@ import subprocess
 from datetime import datetime
 from pathlib import Path
 
-# Phase 5.5: Session tracking
-from .sessions import add_chunk_to_session, register_session
-
-# Phase 6: Safe I/O
 from .fileutil import (
+    MAX_CHUNK_CONTENT_SIZE,
     atomic_write_json,
     atomic_write_text,
     locked_json_update,
     safe_path,
-    validate_chunk_id,
-    MAX_CHUNK_CONTENT_SIZE,
 )
+from .sessions import add_chunk_to_session, register_session
 
 # Phase 5.2: Fuzzy matching (optional dependency)
 try:

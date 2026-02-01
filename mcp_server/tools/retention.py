@@ -19,7 +19,7 @@ import json
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from .fileutil import atomic_write_json, safe_path, validate_chunk_id, MAX_DECOMPRESSED_SIZE
+from .fileutil import MAX_DECOMPRESSED_SIZE, atomic_write_json, safe_path, validate_chunk_id
 
 # Paths - same base as navigation.py
 CONTEXT_DIR = Path(__file__).parent.parent.parent / "context"
