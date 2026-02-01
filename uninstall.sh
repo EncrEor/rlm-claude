@@ -87,9 +87,9 @@ dry()     { echo -e "${BOLD}[DRY]${NC}  $1"; }
 
 run_or_dry() {
     if [ "$DRY_RUN" = true ]; then
-        dry "Would run: $1"
+        dry "Would run: $*"
     else
-        eval "$1"
+        "$@"
     fi
 }
 
@@ -277,7 +277,7 @@ info "Removing skills..."
 for skill in rlm-analyze rlm-parallel; do
     skill_dir="$SKILLS_DIR/$skill"
     if [ -d "$skill_dir" ]; then
-        run_or_dry "rm -rf '$skill_dir'"
+        run_or_dry rm -rf "$skill_dir"
         if [ "$DRY_RUN" = true ]; then
             dry "Would remove $skill_dir"
         else
@@ -347,7 +347,7 @@ fi
 if [ "$REMOVE_DATA" = true ]; then
     info "Removing all RLM files (including data)..."
     if [ -d "$RLM_DIR" ]; then
-        run_or_dry "rm -rf '$RLM_DIR'"
+        run_or_dry rm -rf "$RLM_DIR"
         if [ "$DRY_RUN" != true ]; then
             success "Removed $RLM_DIR ($CHUNK_COUNT chunks, $INSIGHT_COUNT insights deleted)"
         fi
@@ -359,7 +359,7 @@ else
 
     # Remove hooks directory
     if [ -d "$RLM_DIR/hooks" ]; then
-        run_or_dry "rm -rf '$RLM_DIR/hooks'"
+        run_or_dry rm -rf "$RLM_DIR/hooks"
         if [ "$DRY_RUN" != true ]; then
             success "Removed hooks directory"
         fi
@@ -367,7 +367,7 @@ else
 
     # Remove chunk_state.json (runtime state, not user data)
     if [ -f "$RLM_DIR/chunk_state.json" ]; then
-        run_or_dry "rm -f '$RLM_DIR/chunk_state.json'"
+        run_or_dry rm -f "$RLM_DIR/chunk_state.json"
         if [ "$DRY_RUN" != true ]; then
             success "Removed chunk_state.json"
         fi

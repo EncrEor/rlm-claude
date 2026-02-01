@@ -27,6 +27,16 @@ from pathlib import Path
 # Phase 5.5: Session tracking
 from .sessions import add_chunk_to_session, register_session
 
+# Phase 6: Safe I/O
+from .fileutil import (
+    atomic_write_json,
+    atomic_write_text,
+    locked_json_update,
+    safe_path,
+    validate_chunk_id,
+    MAX_CHUNK_CONTENT_SIZE,
+)
+
 # Phase 5.2: Fuzzy matching (optional dependency)
 try:
     from thefuzz import fuzz
@@ -157,13 +167,10 @@ def _load_index() -> dict:
 
 
 def _save_index(index: dict) -> None:
-    """Save chunks index to JSON file."""
-    CONTEXT_DIR.mkdir(parents=True, exist_ok=True)
+    """Save chunks index atomically."""
     index["last_chunking"] = datetime.now().isoformat()
     index["total_chunks"] = len(index.get("chunks", []))
-
-    with open(INDEX_FILE, "w", encoding="utf-8") as f:
-        json.dump(index, f, indent=2, ensure_ascii=False)
+    atomic_write_json(INDEX_FILE, index)
 
 
 def _estimate_tokens(text: str) -> int:
@@ -220,11 +227,11 @@ def _content_hash(content: str) -> str:
         content: The text content to hash
 
     Returns:
-        MD5 hash of normalized content (32 chars)
+        SHA256 hash of normalized content (64 chars)
     """
     # Normalize: lowercase, collapse whitespace
     normalized = " ".join(content.lower().split())
-    return hashlib.md5(normalized.encode()).hexdigest()
+    return hashlib.sha256(normalized.encode()).hexdigest()
 
 
 def _check_duplicate(content_hash: str) -> dict | None:
@@ -250,20 +257,28 @@ def _increment_access(chunk_id: str) -> None:
     """
     Increment access counter for a chunk (Phase 4.3).
 
-    Updates both access_count and last_accessed timestamp.
+    Uses file locking to prevent race conditions on concurrent access.
 
     Args:
         chunk_id: ID of the chunk being accessed
     """
-    index = _load_index()
+    default_index = {
+        "version": "2.0.0",
+        "created_at": datetime.now().isoformat(),
+        "chunks": [],
+        "total_chunks": 0,
+        "total_tokens_estimate": 0,
+        "last_chunking": None,
+    }
 
-    for chunk_info in index.get("chunks", []):
-        if chunk_info["id"] == chunk_id:
-            chunk_info["access_count"] = chunk_info.get("access_count", 0) + 1
-            chunk_info["last_accessed"] = datetime.now().isoformat()
-            break
-
-    _save_index(index)
+    with locked_json_update(INDEX_FILE, default=default_index) as index:
+        for chunk_info in index.get("chunks", []):
+            if chunk_info["id"] == chunk_id:
+                chunk_info["access_count"] = chunk_info.get("access_count", 0) + 1
+                chunk_info["last_accessed"] = datetime.now().isoformat()
+                break
+        index["last_chunking"] = datetime.now().isoformat()
+        index["total_chunks"] = len(index.get("chunks", []))
 
 
 def _generate_chunk_id(project: str = None, ticket: str = None, domain: str = None) -> str:
@@ -341,6 +356,13 @@ def chunk(
     """
     CHUNKS_DIR.mkdir(parents=True, exist_ok=True)
 
+    # Phase 6: Content size limit
+    if len(content) > MAX_CHUNK_CONTENT_SIZE:
+        return {
+            "status": "error",
+            "message": f"Content too large ({len(content)} bytes). Maximum: {MAX_CHUNK_CONTENT_SIZE} bytes.",
+        }
+
     # Phase 4.2: Check for duplicates
     content_hash = _content_hash(content)
     existing = _check_duplicate(content_hash)
@@ -381,8 +403,7 @@ format_version: "2.0"
 
 """
 
-    with open(chunk_file, "w", encoding="utf-8") as f:
-        f.write(header + content)
+    atomic_write_text(chunk_file, header + content)
 
     # Update index
     index = _load_index()
@@ -450,11 +471,16 @@ def peek(chunk_id: str, start: int = 0, end: int | None = None) -> dict:
     Returns:
         Dictionary with chunk content and metadata
     """
-    chunk_file = CHUNKS_DIR / f"{chunk_id}.md"
+    # Phase 6: Validate chunk ID against path traversal
+    chunk_file = safe_path(CHUNKS_DIR, chunk_id, ".md")
+    if chunk_file is None:
+        return {"status": "error", "message": f"Invalid chunk ID format: {chunk_id}"}
 
     # Phase 5.6: Check archives if not in active storage
     if not chunk_file.exists():
-        archive_file = ARCHIVE_DIR / f"{chunk_id}.md.gz"
+        archive_file = safe_path(ARCHIVE_DIR, chunk_id, ".md.gz")
+        if archive_file is None:
+            return {"status": "error", "message": f"Invalid chunk ID format: {chunk_id}"}
         if archive_file.exists():
             # Auto-restore from archive
             try:

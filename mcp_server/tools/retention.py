@@ -19,6 +19,8 @@ import json
 from datetime import datetime, timedelta
 from pathlib import Path
 
+from .fileutil import atomic_write_json, safe_path, validate_chunk_id, MAX_DECOMPRESSED_SIZE
+
 # Paths - same base as navigation.py
 CONTEXT_DIR = Path(__file__).parent.parent.parent / "context"
 CHUNKS_DIR = CONTEXT_DIR / "chunks"
@@ -59,11 +61,8 @@ def _load_index() -> dict:
 
 
 def _save_index(index: dict) -> None:
-    """Save chunks index to JSON file."""
-    CONTEXT_DIR.mkdir(parents=True, exist_ok=True)
-
-    with open(INDEX_FILE, "w", encoding="utf-8") as f:
-        json.dump(index, f, indent=2, ensure_ascii=False)
+    """Save chunks index atomically."""
+    atomic_write_json(INDEX_FILE, index)
 
 
 def _load_archive_index() -> dict:
@@ -80,11 +79,8 @@ def _load_archive_index() -> dict:
 
 
 def _save_archive_index(archive_index: dict) -> None:
-    """Save archive index to JSON file."""
-    CONTEXT_DIR.mkdir(parents=True, exist_ok=True)
-
-    with open(ARCHIVE_INDEX_FILE, "w", encoding="utf-8") as f:
-        json.dump(archive_index, f, indent=2, ensure_ascii=False)
+    """Save archive index atomically."""
+    atomic_write_json(ARCHIVE_INDEX_FILE, archive_index)
 
 
 def _load_purge_log() -> dict:
@@ -101,11 +97,8 @@ def _load_purge_log() -> dict:
 
 
 def _save_purge_log(purge_log: dict) -> None:
-    """Save purge log to JSON file."""
-    CONTEXT_DIR.mkdir(parents=True, exist_ok=True)
-
-    with open(PURGE_LOG_FILE, "w", encoding="utf-8") as f:
-        json.dump(purge_log, f, indent=2, ensure_ascii=False)
+    """Save purge log atomically."""
+    atomic_write_json(PURGE_LOG_FILE, purge_log)
 
 
 # =============================================================================
@@ -141,9 +134,9 @@ def is_immune(chunk: dict) -> bool:
 
     # Check content for protected keywords
     chunk_id = chunk.get("id", "")
-    chunk_file = CHUNKS_DIR / f"{chunk_id}.md"
+    chunk_file = safe_path(CHUNKS_DIR, chunk_id, ".md") if chunk_id else None
 
-    if chunk_file.exists():
+    if chunk_file and chunk_file.exists():
         try:
             content = chunk_file.read_text(encoding="utf-8").upper()
             if any(kw.upper() in content for kw in PROTECTED_KEYWORDS):
@@ -276,6 +269,10 @@ def archive_chunk(chunk_id: str) -> dict:
     Returns:
         Dictionary with status and details
     """
+    # Validate chunk ID against path traversal
+    if not validate_chunk_id(chunk_id):
+        return {"status": "error", "message": f"Invalid chunk ID format: {chunk_id}"}
+
     src_file = CHUNKS_DIR / f"{chunk_id}.md"
 
     if not src_file.exists():
@@ -368,6 +365,10 @@ def restore_chunk(chunk_id: str) -> dict:
     Returns:
         Dictionary with status and details
     """
+    # Validate chunk ID against path traversal
+    if not validate_chunk_id(chunk_id):
+        return {"status": "error", "message": f"Invalid chunk ID format: {chunk_id}"}
+
     archive_file = ARCHIVE_DIR / f"{chunk_id}.md.gz"
 
     if not archive_file.exists():
@@ -380,9 +381,14 @@ def restore_chunk(chunk_id: str) -> dict:
         return {"status": "error", "message": f"Chunk {chunk_id} already exists in active storage"}
 
     try:
-        # Decompress
+        # Decompress with size limit (gzip bomb protection)
         with gzip.open(archive_file, "rb") as f_in:
-            content = f_in.read()
+            content = f_in.read(MAX_DECOMPRESSED_SIZE + 1)
+            if len(content) > MAX_DECOMPRESSED_SIZE:
+                return {
+                    "status": "error",
+                    "message": f"Decompressed size exceeds {MAX_DECOMPRESSED_SIZE} bytes limit",
+                }
 
         # Ensure chunks directory exists
         CHUNKS_DIR.mkdir(parents=True, exist_ok=True)
@@ -449,6 +455,10 @@ def purge_chunk(chunk_id: str) -> dict:
     Returns:
         Dictionary with status and details
     """
+    # Validate chunk ID against path traversal
+    if not validate_chunk_id(chunk_id):
+        return {"status": "error", "message": f"Invalid chunk ID format: {chunk_id}"}
+
     archive_file = ARCHIVE_DIR / f"{chunk_id}.md.gz"
 
     if not archive_file.exists():
@@ -632,5 +642,7 @@ def is_archived(chunk_id: str) -> bool:
     Returns:
         True if chunk is archived, False otherwise
     """
+    if not validate_chunk_id(chunk_id):
+        return False
     archive_file = ARCHIVE_DIR / f"{chunk_id}.md.gz"
     return archive_file.exists()

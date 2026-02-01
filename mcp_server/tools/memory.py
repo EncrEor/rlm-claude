@@ -11,6 +11,8 @@ import json
 from datetime import datetime
 from pathlib import Path
 
+from .fileutil import atomic_write_json
+
 # Path to session memory file (relative to RLM root)
 CONTEXT_DIR = Path(__file__).parent.parent.parent / "context"
 MEMORY_FILE = CONTEXT_DIR / "session_memory.json"
@@ -34,18 +36,15 @@ def _load_memory() -> dict:
 
 
 def _save_memory(memory: dict) -> None:
-    """Save session memory to JSON file."""
-    CONTEXT_DIR.mkdir(parents=True, exist_ok=True)
+    """Save session memory atomically."""
     memory["metadata"]["last_updated"] = datetime.now().isoformat()
     memory["metadata"]["total_insights"] = len(memory["insights"])
-
-    with open(MEMORY_FILE, "w", encoding="utf-8") as f:
-        json.dump(memory, f, indent=2, ensure_ascii=False)
+    atomic_write_json(MEMORY_FILE, memory)
 
 
 def _generate_id(content: str) -> str:
     """Generate a short unique ID for an insight."""
-    hash_obj = hashlib.md5(content.encode())
+    hash_obj = hashlib.sha256(content.encode())
     return hash_obj.hexdigest()[:8]
 
 

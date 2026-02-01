@@ -9,6 +9,8 @@ import json
 from datetime import datetime
 from pathlib import Path
 
+from .fileutil import atomic_write_json
+
 # Paths
 CONTEXT_DIR = Path(__file__).parent.parent.parent / "context"
 SESSIONS_FILE = CONTEXT_DIR / "sessions.json"
@@ -25,10 +27,8 @@ def _load_sessions() -> dict:
 
 
 def _save_sessions(data: dict) -> None:
-    """Save sessions index to disk."""
-    SESSIONS_FILE.parent.mkdir(parents=True, exist_ok=True)
-    with open(SESSIONS_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+    """Save sessions index atomically."""
+    atomic_write_json(SESSIONS_FILE, data)
 
 
 def _load_domains() -> dict:
@@ -61,9 +61,7 @@ def _load_domains() -> dict:
 
     if not DOMAINS_FILE.exists():
         # Create default domains file
-        DOMAINS_FILE.parent.mkdir(parents=True, exist_ok=True)
-        with open(DOMAINS_FILE, "w", encoding="utf-8") as f:
-            json.dump(default_domains, f, indent=2, ensure_ascii=False)
+        atomic_write_json(DOMAINS_FILE, default_domains)
         return default_domains
 
     with open(DOMAINS_FILE, encoding="utf-8") as f:
