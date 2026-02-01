@@ -197,9 +197,8 @@ rlm-claude/
 │       └── retention.py       # Archive/restore/purge lifecycle
 │
 ├── hooks/                     # Claude Code hooks
-│   ├── pre_compact_chunk.py   # Auto-save before /compact
-│   ├── auto_chunk_check.py    # Turn tracking
-│   └── reset_chunk_counter.py # Stats reset after chunk
+│   ├── pre_compact_chunk.py   # Auto-save before /compact (PreCompact hook)
+│   └── reset_chunk_counter.py # Stats reset after chunk (PostToolUse hook)
 │
 ├── templates/
 │   ├── hooks_settings.json    # Hook config template
@@ -306,9 +305,8 @@ claude mcp add rlm-server -- python3 /path/to/mcp_server/server.py
 ### "Hooks not working"
 
 ```bash
-python3 ~/.claude/rlm/hooks/auto_chunk_check.py   # Test manually
-cat ~/.claude/rlm/chunk_state.json                  # Check state
-cat ~/.claude/settings.json | grep -A 10 "hooks"    # Verify config
+cat ~/.claude/settings.json | grep -A 10 "PreCompact"  # Verify hooks config
+ls ~/.claude/rlm/hooks/                                  # Check installed hooks
 ```
 
 ---

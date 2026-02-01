@@ -325,8 +325,7 @@ RLM/
 │       └── retention.py       # Phase 5.6 (archive/restore/purge)
 │
 ├── hooks/                     # Phase 3+ (auto-chunking)
-│   ├── pre_compact_chunk.py   # Hook PreCompact - force chunk avant compact
-│   ├── auto_chunk_check.py    # Hook Stop - progressif + context-aware
+│   ├── pre_compact_chunk.py   # Hook PreCompact - sauvegarde auto avant /compact
 │   └── reset_chunk_counter.py # Hook PostToolUse - reset compteur
 │
 ├── templates/
@@ -444,12 +443,8 @@ claude mcp add rlm-server -- python3 /path/to/mcp_server/server.py
 ### "Hooks ne fonctionnent pas"
 
 ```bash
-# Tester manuellement
-python3 ~/.claude/rlm/hooks/auto_chunk_check.py
-cat ~/.claude/rlm/chunk_state.json
-
-# Vérifier settings.json
-cat ~/.claude/settings.json | grep -A 10 "hooks"
+cat ~/.claude/settings.json | grep -A 10 "PreCompact"  # Vérifier la config hooks
+ls ~/.claude/rlm/hooks/                                  # Vérifier les hooks installés
 ```
 
 ### "Skill /rlm-analyze non trouvé"

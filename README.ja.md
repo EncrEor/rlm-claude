@@ -197,9 +197,8 @@ rlm-claude/
 │       └── retention.py       # アーカイブ/復元/パージのライフサイクル
 │
 ├── hooks/                     # Claude Codeフック
-│   ├── pre_compact_chunk.py   # /compact前の自動保存
-│   ├── auto_chunk_check.py    # ターン追跡
-│   └── reset_chunk_counter.py # チャンク後の統計リセット
+│   ├── pre_compact_chunk.py   # /compact前の自動保存（PreCompactフック）
+│   └── reset_chunk_counter.py # チャンク後の統計リセット（PostToolUseフック）
 │
 ├── templates/
 │   ├── hooks_settings.json    # フック設定テンプレート
@@ -297,9 +296,8 @@ claude mcp add rlm-server -- python3 /path/to/mcp_server/server.py
 ### 「フックが動作しない」
 
 ```bash
-python3 ~/.claude/rlm/hooks/auto_chunk_check.py   # 手動でテスト
-cat ~/.claude/rlm/chunk_state.json                  # 状態を確認
-cat ~/.claude/settings.json | grep -A 10 "hooks"    # 設定を検証
+cat ~/.claude/settings.json | grep -A 10 "PreCompact"  # フック設定を検証
+ls ~/.claude/rlm/hooks/                                  # インストール済みフックを確認
 ```
 
 ---
