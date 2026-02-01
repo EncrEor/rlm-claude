@@ -32,9 +32,11 @@ STOPWORDS_FR = {
 STOPWORDS_EN = {
     "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
     "have", "has", "had", "do", "does", "did", "will", "would", "could",
+    "should", "shall", "may", "might", "must", "can",
     "i", "you", "he", "she", "it", "we", "they", "this", "that", "these",
     "of", "in", "to", "for", "with", "on", "at", "by", "from", "up", "out",
     "and", "or", "but", "if", "not", "no", "yes", "so", "as", "than",
+    "very", "too", "just", "only", "also", "about", "more", "some", "any",
     "what", "which", "who", "when", "where", "how", "all", "each", "both",
 }
 
