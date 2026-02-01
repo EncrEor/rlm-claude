@@ -230,6 +230,60 @@ def _content_hash(content: str) -> str:
     return hashlib.sha256(normalized.encode()).hexdigest()
 
 
+def _parse_date_from_chunk(chunk_info: dict) -> str | None:
+    """
+    Extract date string (YYYY-MM-DD) from chunk metadata or ID.
+
+    Tries created_at first, then falls back to parsing the chunk ID.
+
+    Args:
+        chunk_info: Chunk metadata dict from index.json
+
+    Returns:
+        Date string in YYYY-MM-DD format, or None if unparseable
+    """
+    # Try created_at field first (most reliable)
+    created_at = chunk_info.get("created_at", "")
+    if created_at and len(created_at) >= 10:
+        return created_at[:10]
+
+    # Fallback: parse from chunk ID (format starts with YYYY-MM-DD)
+    chunk_id = chunk_info.get("id", "")
+    if len(chunk_id) >= 10 and chunk_id[4] == "-" and chunk_id[7] == "-":
+        return chunk_id[:10]
+
+    return None
+
+
+def _chunk_in_date_range(chunk_info: dict, date_from: str | None, date_to: str | None) -> bool:
+    """
+    Check if a chunk falls within a date range.
+
+    Uses simple string comparison on YYYY-MM-DD format (lexicographic = chronologic).
+
+    Args:
+        chunk_info: Chunk metadata dict from index.json
+        date_from: Start date inclusive (YYYY-MM-DD) or None
+        date_to: End date inclusive (YYYY-MM-DD) or None
+
+    Returns:
+        True if within range (or no range specified), False otherwise
+    """
+    if date_from is None and date_to is None:
+        return True
+
+    chunk_date = _parse_date_from_chunk(chunk_info)
+    if chunk_date is None:
+        return False
+
+    if date_from and chunk_date < date_from:
+        return False
+    if date_to and chunk_date > date_to:
+        return False
+
+    return True
+
+
 def _check_duplicate(content_hash: str) -> dict | None:
     """
     Check if content with this hash already exists (Phase 4.2).
@@ -539,6 +593,8 @@ def grep(
     domain: str = None,
     fuzzy: bool = False,
     fuzzy_threshold: int = 80,
+    date_from: str = None,
+    date_to: str = None,
 ) -> dict:
     """
     Search for a pattern across all chunks.
@@ -548,6 +604,7 @@ def grep(
 
     Phase 5.2: Supports fuzzy matching (tolerates typos).
     Phase 5.5c: Supports filtering by project and domain.
+    Phase 7.1: Supports temporal filtering by date range.
 
     Args:
         pattern: Text or regex pattern to search for
@@ -557,13 +614,15 @@ def grep(
         domain: Filter by domain (Phase 5.5c)
         fuzzy: Enable fuzzy matching (Phase 5.2)
         fuzzy_threshold: Minimum similarity score 0-100 (Phase 5.2)
+        date_from: Start date inclusive, YYYY-MM-DD (Phase 7.1)
+        date_to: End date inclusive, YYYY-MM-DD (Phase 7.1)
 
     Returns:
         Dictionary with list of matches
     """
     # Phase 5.2: Dispatch to fuzzy search if enabled
     if fuzzy:
-        return grep_fuzzy(pattern, fuzzy_threshold, limit, project, domain)
+        return grep_fuzzy(pattern, fuzzy_threshold, limit, project, domain, date_from, date_to)
 
     index = _load_index()
     matches = []
@@ -575,6 +634,9 @@ def grep(
         regex = re.compile(re.escape(pattern), re.IGNORECASE)
 
     for chunk_info in index.get("chunks", []):
+        # Phase 7.1: Apply temporal filter
+        if not _chunk_in_date_range(chunk_info, date_from, date_to):
+            continue
         # Phase 5.5c: Apply project/domain filters
         if project and chunk_info.get("project") != project:
             continue
@@ -637,7 +699,13 @@ def grep(
 
 
 def grep_fuzzy(
-    pattern: str, threshold: int = 80, limit: int = 10, project: str = None, domain: str = None
+    pattern: str,
+    threshold: int = 80,
+    limit: int = 10,
+    project: str = None,
+    domain: str = None,
+    date_from: str = None,
+    date_to: str = None,
 ) -> dict:
     """
     Fuzzy grep - find matches even with typos (Phase 5.2).
@@ -645,12 +713,16 @@ def grep_fuzzy(
     Uses thefuzz library for approximate string matching.
     Tolerates typos like "validaton" finding "validation".
 
+    Phase 7.1: Supports temporal filtering by date range.
+
     Args:
         pattern: Text to search for (not regex, fuzzy matching)
         threshold: Minimum similarity score 0-100 (default: 80)
         limit: Maximum number of matches to return
         project: Filter by project name (Phase 5.5c)
         domain: Filter by domain (Phase 5.5c)
+        date_from: Start date inclusive, YYYY-MM-DD (Phase 7.1)
+        date_to: End date inclusive, YYYY-MM-DD (Phase 7.1)
 
     Returns:
         Dictionary with matches sorted by similarity score
@@ -665,6 +737,9 @@ def grep_fuzzy(
     matches = []
 
     for chunk_info in index.get("chunks", []):
+        # Phase 7.1: Apply temporal filter
+        if not _chunk_in_date_range(chunk_info, date_from, date_to):
+            continue
         # Phase 5.5c: Apply project/domain filters
         if project and chunk_info.get("project") != project:
             continue

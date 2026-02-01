@@ -508,14 +508,25 @@ Après analyse, **MCP Server + Hooks** est l'approche la plus puissante et pére
 | 5.5 | Multi-sessions | ✅ FAIT (sessions, domains) |
 | 5.6 | Retention (archive/purge) | ✅ FAIT (v0.7.0) |
 
-### Phase 6 : Production-Ready - PROCHAINE
+### Phase 6 : Production-Ready - EN COURS
 
 | Tâche | Description | Statut |
 |-------|-------------|--------|
 | 6.1 | Tests automatisés (80%+) | ⏳ En cours |
-| 6.2 | CI/CD GitHub Actions | ✅ Fichier créé |
+| 6.2 | CI/CD GitHub Actions | ✅ FAIT (ruff lint + format) |
 | 6.3 | Distribution PyPI | ⏳ À FAIRE |
-| 6.4 | Robustesse (logging, atomic) | ⏳ À FAIRE |
+| 6.4 | Robustesse (atomic writes, path traversal, locking) | ✅ FAIT (fileutil.py) |
+| 6.5 | SECURITY.md + vulnerability reporting | ✅ FAIT |
+
+### Phase 7 : MAGMA-Inspired Search Upgrade - PLANIFIÉE
+
+> **Source** : [MAGMA (arXiv:2601.03236)](https://arxiv.org/abs/2601.03236) — Upgrade chirurgical, pas réécriture
+> **Décidé** : 01/02/2026
+
+| Tâche | Description | Statut |
+|-------|-------------|--------|
+| 7.1 | Filtre temporel (`date_from`/`date_to`) sur `rlm_search` et `rlm_grep` | ⏳ PROCHAINE |
+| 7.2 | Extraction d'entités auto dans `rlm_chunk()` (fichiers, modules, versions) | ⏳ À FAIRE |
 
 ---
 
@@ -597,6 +608,6 @@ Tu disposes d'outils RLM pour naviguer dans le contexte étendu.
 
 ---
 
-**Version** : 2.3
-**Date** : 2026-01-24
-**Statut** : Production - v0.9.0 Systeme Simplifie (user-driven + auto-compact)
+**Version** : 2.4
+**Date** : 2026-02-01
+**Statut** : Production v0.9.0 — Phase 6 en cours, Phase 7 planifiée (MAGMA-inspired)

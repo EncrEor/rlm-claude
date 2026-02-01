@@ -7,8 +7,34 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-### Planned
-- Phase 6: Production-Ready (tests, CI/CD, PyPI distribution)
+### Planned — Phase 7: MAGMA-Inspired Search Upgrade
+- **7.2** Entity extraction: Auto-extract entities (files, modules, versions) at `rlm_chunk()` time
+
+### Added — Phase 7.1: Temporal Filtering (COMPLETE)
+- `date_from`/`date_to` params on `rlm_search` — filter BM25 results by date range
+- `date_from`/`date_to` params on `rlm_grep` — filter regex/fuzzy results by date range
+- `_parse_date_from_chunk()` helper — extracts date from `created_at` or chunk ID fallback
+- `_chunk_in_date_range()` helper — lexicographic YYYY-MM-DD comparison (no datetime parsing)
+- 28 tests in `tests/test_temporal_filter.py` (helpers, grep, fuzzy+date, search, legacy, edge cases)
+- Backward compatible: legacy format 1.0 chunks supported via ID-based date extraction
+
+### Added — Phase 6: Production-Ready (in progress)
+- `mcp_server/tools/fileutil.py` - Shared security utilities (atomic writes, path traversal prevention, file locking)
+- `SECURITY.md` - Vulnerability reporting policy
+- GitHub Actions CI: ruff lint + ruff format
+- `tests/` directory with pytest infrastructure
+
+### Security (Phase 6)
+- **Path traversal prevention** — Chunk IDs validated against strict allowlist `[a-zA-Z0-9_.-&]`, resolved paths checked
+- **Atomic writes** — All JSON and chunk files written via write-to-temp-then-rename (POSIX atomic)
+- **File locking** — `fcntl.flock` exclusive locks for concurrent read-modify-write on shared indexes
+- **Content size limits** — 2 MB chunks, 10 MB decompression cap (gzip bomb protection)
+- **SHA-256 hashing** — Content deduplication uses SHA-256 (not MD5)
+
+### Changed
+- Duplicate detection upgraded from MD5 to SHA-256
+- All I/O operations consolidated into `fileutil.py`
+- Import ordering fixed for ruff compliance
 
 ---
 

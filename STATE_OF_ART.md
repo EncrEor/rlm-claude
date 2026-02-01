@@ -1,6 +1,6 @@
 # État de l'Art : Recursive Language Models (RLM) et Mémoire Infinie LLM
 
-> **Dernière mise à jour** : 2026-01-18
+> **Dernière mise à jour** : 2026-02-01
 > **Objectif** : Comprendre et implémenter une solution pour les contextes longs
 
 ---
@@ -261,16 +261,128 @@ Test-Time Training compresse le contexte directement dans les poids du modèle.
 
 ---
 
-## 6. Implémentations Open Source
+## 6. Nouveaux Papiers Analysés (Février 2026)
 
-### 6.1 RLM Officiel
+> **Date de la recherche** : 01/02/2026
+> **Objectif** : Trouver des papiers transformables en outils concrets pour Claude Code
+
+### 6.1 MAGMA — Multi-Graph Agentic Memory Architecture
+
+> **arXiv** : [2601.03236](https://arxiv.org/abs/2601.03236) — Janvier 2026
+> **Auteurs** : Jiang, Li, Li, Li (UT Dallas, U. Florida)
+> **Code** : [github.com/FredJiang0324/MAMGA](https://github.com/FredJiang0324/MAMGA)
+
+Sépare la mémoire en 4 graphes orthogonaux : sémantique, temporel, causal, et entités.
+Routing intelligent des requêtes vers le bon graphe selon l'intent.
+
+| Métrique | Résultat |
+|----------|----------|
+| Précision vs baselines | +18.6% à +45.5% |
+| Réduction tokens | -95% |
+| Latence requête | -40% |
+
+**Décision pour RLM** : Upgrade chirurgical — prendre filtre temporel + extraction d'entités.
+Ne PAS implémenter le graphe complet (overkill pour notre échelle).
+
+### 6.2 MCP-Zero — Active Tool Discovery
+
+> **arXiv** : [2506.01056](https://arxiv.org/abs/2506.01056) — Juin 2025
+> **Auteurs** : Fei, Zheng, Feng
+> **Code** : [github.com/xfey/MCP-Zero](https://github.com/xfey/MCP-Zero)
+
+L'agent demande activement les outils dont il a besoin au lieu de recevoir toutes les descriptions.
+Routing sémantique hiérarchique. -98% de tokens sur le toolset.
+
+**Décision pour RLM** : **Rejeté** — Ahmed gère manuellement l'activation/désactivation des MCP.
+
+### 6.3 MemSearcher — Mémoire Compacte Auto-optimisée
+
+> **arXiv** : [2511.02805](https://arxiv.org/abs/2511.02805) — Novembre 2025
+> **Auteurs** : Yuan et al. (CAS)
+> **Code** : [github.com/icip-cas/MemSearcher](https://github.com/icip-cas/MemSearcher)
+
+Maintient une mémoire compacte mise à jour à chaque tour via RL (multi-context GRPO).
+Le modèle 3B surpasse les baselines 7B — preuve que l'architecture compte plus que la taille.
+
+**Décision pour RLM** : Pattern intéressant mais RL difficile à reproduire. À surveiller.
+
+### 6.4 MAKER — 1M d'Étapes LLM Zéro Erreurs
+
+> **arXiv** : [2511.09030](https://arxiv.org/abs/2511.09030) — Novembre 2025
+> **Auteurs** : Meyerson et al. (Cognizant AI Labs)
+
+MAKER = Maximal Agentic decomposition + first-to-ahead-by-K Error correction + Red-flagging.
+Décomposition extrême en micro-agents avec vote multi-agent et red-flagging des outputs suspects.
+Résout 1M d'étapes (Towers of Hanoi 20 disques) avec zéro erreurs.
+
+**Décision pour RLM** : Pattern de fiabilité pertinent pour tâches longues.
+Le voting + red-flagging pourrait s'ajouter au skill `/rlm-parallel`.
+
+### 6.5 EverMemOS — OS Mémoire avec Engrams
+
+> **arXiv** : [2601.02163](https://arxiv.org/abs/2601.02163) — Janvier 2026
+> **Auteurs** : Hu et al.
+> **Code** : [github.com/EverMind-AI/EverMemOS](https://github.com/EverMind-AI/EverMemOS)
+
+Inspiré de la neurobiologie : les souvenirs passent par 3 stades :
+1. Formation épisodique (MemCells)
+2. Consolidation sémantique (MemScenes)
+3. Reconstruction reconstructive (retrieval guidé)
+
+SOTA sur LoCoMo et LongMemEval.
+
+**Décision pour RLM** : Concept MemScenes (regroupement thématique auto) intéressant pour Phase 8+.
+
+### 6.6 LADDER — Auto-amélioration Récursive
+
+> **arXiv** : [2503.00735](https://arxiv.org/abs/2503.00735) — Mars 2025
+
+Framework pour auto-amélioration via décomposition récursive et RL (GRPO).
+Un modèle 7B passe de 2% à 82% en maths. Pas directement applicable comme outil MCP.
+
+### 6.7 CREATOR — Création Autonome d'Outils
+
+> **arXiv** : [2305.14318](https://arxiv.org/abs/2305.14318) — 2023, mis à jour 2024
+> **Auteurs** : Qian et al. (Tsinghua, UIUC)
+
+Le LLM crée ses propres outils (code + documentation) quand aucun outil existant ne convient.
+4 étapes : Creation → Decision → Execution → Rectification.
+Pertinent si on veut que Claude Code auto-génère de nouveaux outils MCP à la volée.
+
+### 6.8 Surveys et Méta-analyses
+
+| Paper | arXiv | Sujet |
+|-------|-------|-------|
+| Memory in the Age of AI Agents | [2512.13564](https://arxiv.org/abs/2512.13564) | Survey mémoire agents (taxonomie factuel/expérientiel/working) |
+| Agentic RAG | [2501.09136](https://arxiv.org/abs/2501.09136) | RAG avec agents autonomes (reflection, planning, tool use) |
+| AI Agentic Programming | [2508.11126](https://arxiv.org/abs/2508.11126) | Survey agents de codage autonomes |
+| Impact of AGENTS.md | [2601.20404](https://arxiv.org/abs/2601.20404) | Étude sur les fichiers de contexte agent (60k+ repos) |
+
+### 6.9 Stress Test RLM (01/02/2026)
+
+Test des limites de BM25 sur 100 chunks / 146 insights :
+
+| Requête | Score top-1 | Verdict |
+|---------|-------------|---------|
+| "pourquoi layout produit changé" | 3.70 ✅ | BM25 suffisant |
+| "tous les bugs website_joyjuice" | 3.11 ⚠️ | Pertinent mais incomplet |
+| "décisions entre 25 et 30 janvier" | 2.92 ❌ | **Échec** — retourne le 18 janvier |
+
+**Conclusion** : BM25 marche à 80%. Échoue sur requêtes temporelles et agrégation.
+→ Décision : implémenter filtre temporel (Phase 7.1) + extraction entités (Phase 7.2).
+
+---
+
+## 7. Implémentations Open Source
+
+### 7.1 RLM Officiel
 
 | Repo | Description | Lien |
 |------|-------------|------|
 | **rlm** | Implémentation principale | [github.com/alexzhang13/rlm](https://github.com/alexzhang13/rlm) |
 | **rlm-minimal** | POC minimal | [github.com/alexzhang13/rlm-minimal](https://github.com/alexzhang13/rlm-minimal) |
 
-### 6.2 Communauté
+### 7.2 Communauté
 
 | Repo | Description |
 |------|-------------|
@@ -278,7 +390,7 @@ Test-Time Training compresse le contexte directement dans les poids du modèle.
 | **fullstackwebdev/rlm_repl** | POC avec REPL |
 | **codecrack3/RLM-DSpy** | Intégration DSPy |
 
-### 6.3 Letta
+### 7.3 Letta
 
 | Repo | Description |
 |------|-------------|
@@ -286,16 +398,16 @@ Test-Time Training compresse le contexte directement dans les poids du modèle.
 
 ---
 
-## 7. Synthèse : Quelle Approche pour Joy Juice ?
+## 8. Synthèse : Quelle Approche pour Joy Juice ?
 
-### 7.1 Notre contexte spécifique
+### 8.1 Notre contexte spécifique
 
 - **Conversations longues** avec Claude Code
 - **Documents de référence** (CLAUDE.md, PROJECT_*.md, etc.)
 - **Historique de session** qui s'accumule
 - **Pas besoin de persistance** entre sessions (fichiers suffisent)
 
-### 7.2 Recommandation : RLM adapté
+### 8.2 Recommandation : RLM adapté
 
 **Pourquoi RLM plutôt que Letta ?**
 
@@ -312,7 +424,7 @@ Test-Time Training compresse le contexte directement dans les poids du modèle.
 
 ---
 
-## 8. Sources et Références
+## 9. Sources et Références
 
 ### Papers
 - Zhang et al. (2025). "Recursive Language Models". arXiv:2512.24601
@@ -332,6 +444,7 @@ Test-Time Training compresse le contexte directement dans les poids du modèle.
 
 ---
 
-**Version** : 1.0
+**Version** : 2.0
 **Auteur** : Ahmed + Claude
+**Dernière MAJ** : 2026-02-01
 **Licence** : Usage interne Joy Juice

@@ -266,6 +266,8 @@ def rlm_grep(
     domain: str = "",
     fuzzy: bool = False,
     fuzzy_threshold: int = 80,
+    date_from: str = "",
+    date_to: str = "",
 ) -> str:
     """
     Search for a pattern across all saved chunks.
@@ -275,6 +277,7 @@ def rlm_grep(
 
     Phase 5.2: Supports fuzzy matching (tolerates typos like "validaton" → "validation").
     Phase 5.5c: Supports filtering by project and domain.
+    Phase 7.1: Supports temporal filtering by date range.
 
     Args:
         pattern: Text or regex pattern to search for (case-insensitive)
@@ -283,6 +286,8 @@ def rlm_grep(
         domain: Filter by domain (e.g., "bp", "seo", "r&d")
         fuzzy: Enable fuzzy matching (tolerates typos, Phase 5.2)
         fuzzy_threshold: Minimum similarity score 0-100 for fuzzy (default: 80)
+        date_from: Start date inclusive, YYYY-MM-DD (e.g., "2026-01-25")
+        date_to: End date inclusive, YYYY-MM-DD (e.g., "2026-01-30")
 
     Returns:
         List of matches with chunk IDs and context
@@ -294,6 +299,8 @@ def rlm_grep(
         domain=domain if domain else None,
         fuzzy=fuzzy,
         fuzzy_threshold=fuzzy_threshold,
+        date_from=date_from if date_from else None,
+        date_to=date_to if date_to else None,
     )
 
     # Handle error (e.g., thefuzz not installed)
@@ -328,7 +335,14 @@ def rlm_grep(
 
 
 @mcp.tool()
-def rlm_search(query: str, limit: int = 5, project: str = "", domain: str = "") -> str:
+def rlm_search(
+    query: str,
+    limit: int = 5,
+    project: str = "",
+    domain: str = "",
+    date_from: str = "",
+    date_to: str = "",
+) -> str:
     """
     Search chunks using BM25 ranking (Phase 5.1).
 
@@ -338,18 +352,26 @@ def rlm_search(query: str, limit: int = 5, project: str = "", domain: str = "") 
     Uses French/English tokenization with accent normalization.
 
     Phase 5.5c: Supports filtering by project and domain.
+    Phase 7.1: Supports temporal filtering by date range.
 
     Args:
         query: Natural language search query (e.g., "business plan discussion")
         limit: Maximum results (default: 5)
         project: Filter by project name (e.g., "RLM", "JoyJuice")
         domain: Filter by domain (e.g., "bp", "seo", "r&d")
+        date_from: Start date inclusive, YYYY-MM-DD (e.g., "2026-01-25")
+        date_to: End date inclusive, YYYY-MM-DD (e.g., "2026-01-30")
 
     Returns:
         Ranked list of matching chunks with scores
     """
     result = bm25_search(
-        query, limit, project=project if project else None, domain=domain if domain else None
+        query,
+        limit,
+        project=project if project else None,
+        domain=domain if domain else None,
+        date_from=date_from if date_from else None,
+        date_to=date_to if date_to else None,
     )
 
     if result["status"] == "error":

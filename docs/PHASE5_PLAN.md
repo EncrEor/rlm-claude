@@ -2,7 +2,7 @@
 
 > **Document de planification R&D** - A valider avant implementation
 > **Auteurs** : Ahmed + Claude (session 2026-01-18)
-> **Statut** : IMPLEMENTATION EN COURS - Phase 5.5b
+> **Statut** : COMPLÈTE (toutes sous-phases terminées)
 
 ---
 
@@ -10,14 +10,22 @@
 
 | Sous-phase | Description | Statut |
 |------------|-------------|--------|
-| **5.1** | BM25 Ranking | FAIT |
-| **5.2** | Grep Optimise | A FAIRE |
-| **5.3** | Sub-agents Paralleles | FAIT |
-| **5.4** | Embeddings (backup) | OPTIONNEL |
-| **5.5a** | Multi-sessions Fondation | FAIT |
-| **5.5b** | Multi-sessions Tracking | A FAIRE |
-| **5.5c** | Multi-sessions Cross-session | A FAIRE |
-| **5.6** | Retention | A FAIRE |
+| **5.1** | BM25 Ranking | ✅ FAIT (v0.5.1) |
+| **5.2** | Grep Optimisé (Fuzzy) | ✅ FAIT (v0.6.1) |
+| **5.3** | Sub-agents Parallèles | ✅ FAIT (/rlm-parallel) |
+| **5.4** | Embeddings (backup) | OPTIONNEL (non nécessaire) |
+| **5.5a** | Multi-sessions Fondation | ✅ FAIT (v0.6.0) |
+| **5.5b** | Multi-sessions Tracking | ✅ FAIT (v0.6.0) |
+| **5.5c** | Multi-sessions Cross-session | ✅ FAIT (v0.6.0) |
+| **5.6** | Retention | ✅ FAIT (v0.7.0) |
+
+### Phases suivantes
+
+| Phase | Description | Statut |
+|-------|-------------|--------|
+| **6** | Production-Ready (sécurité, CI, tests) | 🔄 EN COURS |
+| **7.1** | Filtre temporel (MAGMA-inspired) | ⏳ PLANIFIÉ |
+| **7.2** | Extraction d'entités (MAGMA-inspired) | ⏳ PLANIFIÉ |
 
 ### Phase 5.5a implémentée (2026-01-18)
 
@@ -915,5 +923,5 @@ assert tokenize_fr("Deploy v19.0.2 on VPS Odoo") == ["deploy", "v19", "vps", "od
 
 ---
 
-**Derniere MAJ** : 2026-01-18
-**Statut** : DRAFT - En attente de validation
+**Dernière MAJ** : 2026-02-01
+**Statut** : COMPLÈTE - Phase 5 terminée, Phase 7 planifiée

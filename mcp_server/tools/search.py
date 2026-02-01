@@ -183,21 +183,33 @@ class RLMSearch:
         return output
 
 
-def search(query: str, limit: int = 5, project: str = None, domain: str = None) -> dict:
+def search(
+    query: str,
+    limit: int = 5,
+    project: str = None,
+    domain: str = None,
+    date_from: str = None,
+    date_to: str = None,
+) -> dict:
     """
     Convenience function for searching chunks.
 
     Phase 5.5c: Supports filtering by project and domain.
+    Phase 7.1: Supports temporal filtering by date range.
 
     Args:
         query: Natural language search query
         limit: Maximum results (default: 5)
         project: Filter by project name (Phase 5.5c)
         domain: Filter by domain (Phase 5.5c)
+        date_from: Start date inclusive, YYYY-MM-DD (Phase 7.1)
+        date_to: End date inclusive, YYYY-MM-DD (Phase 7.1)
 
     Returns:
         Dictionary with search results
     """
+    from .navigation import _chunk_in_date_range
+
     searcher = RLMSearch()
 
     try:
@@ -206,20 +218,24 @@ def search(query: str, limit: int = 5, project: str = None, domain: str = None) 
     except ImportError as e:
         return {"status": "error", "message": str(e), "results": []}
 
-    # Phase 5.5c: Filter by project/domain if specified
-    if project or domain:
+    # Phase 5.5c + 7.1: Filter by project/domain/date if specified
+    has_filters = project or domain or date_from or date_to
+    if has_filters:
         # Load index to get chunk metadata
         index_file = CONTEXT_DIR / "index.json"
         if index_file.exists():
             with open(index_file, encoding="utf-8") as f:
                 index = json.load(f)
 
-            # Build lookup for project/domain
+            # Build lookup for metadata
             chunk_meta = {c["id"]: c for c in index.get("chunks", [])}
 
             filtered = []
             for r in results:
                 meta = chunk_meta.get(r["chunk_id"], {})
+                # Phase 7.1: Temporal filter
+                if not _chunk_in_date_range(meta, date_from, date_to):
+                    continue
                 if project and meta.get("project") != project:
                     continue
                 if domain and meta.get("domain") != domain:
@@ -230,11 +246,22 @@ def search(query: str, limit: int = 5, project: str = None, domain: str = None) 
     # Apply final limit
     results = results[:limit]
 
+    # Build filters summary
+    active_filters = {}
+    if project:
+        active_filters["project"] = project
+    if domain:
+        active_filters["domain"] = domain
+    if date_from:
+        active_filters["date_from"] = date_from
+    if date_to:
+        active_filters["date_to"] = date_to
+
     return {
         "status": "success",
         "query": query,
         "result_count": len(results),
-        "filters": {"project": project, "domain": domain} if (project or domain) else None,
+        "filters": active_filters if active_filters else None,
         "results": results,
     }
 

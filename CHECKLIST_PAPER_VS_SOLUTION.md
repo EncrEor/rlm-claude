@@ -1,7 +1,7 @@
 # Checklist : Paper RLM vs Notre Solution
 
 > **Objectif** : Vérifier qu'on n'a rien oublié d'important du papier MIT
-> **Date** : 2026-01-18
+> **Date** : 2026-01-18 (mise à jour 2026-02-01)
 
 ---
 
@@ -137,12 +137,65 @@ Basé sur cette checklist, voici ce qu'on devrait ajouter :
 
 ---
 
-## 10. Score de Couverture
+## 10. Score de Couverture (Paper RLM MIT)
 
 **Concepts couverts** : 22/26 = **85%**
 
 **Manquants critiques** : 0
 **Manquants nice-to-have** : 4 (ajoutés au plan)
+
+---
+
+## 11. Concepts Inspirés de MAGMA (Février 2026)
+
+> **Source** : [MAGMA: A Multi-Graph based Agentic Memory Architecture](https://arxiv.org/abs/2601.03236)
+> **Date analyse** : 01/02/2026
+> **Approche** : Upgrade chirurgical — prendre les idées utiles, pas le système complet
+
+### Concepts retenus
+
+| Concept MAGMA | Notre adaptation | Statut | Phase |
+|---------------|------------------|--------|-------|
+| **Graphe temporel** | Filtre `date_from`/`date_to` sur `rlm_search` et `rlm_grep` | ⏳ À faire | 7.1 |
+| **Graphe entités** | Champ `entities: [...]` auto-extrait dans `index.json` | ⏳ À faire | 7.2 |
+
+### Concepts rejetés
+
+| Concept MAGMA | Raison du rejet |
+|---------------|-----------------|
+| **Graphe sémantique complet** | BM25 suffit pour 80% des cas (validé par stress test) |
+| **Graphe causal** | Pas assez de cas d'usage réels, complexité disproportionnée |
+| **Adaptive Traversal Policy** | Over-engineering pour notre échelle (~100 chunks) |
+| **Vector database** | Dépendance lourde, pas justifiée par les performances actuelles |
+
+### Justification par stress test
+
+| Requête | BM25 seul | Avec filtre temporel | Avec entités |
+|---------|-----------|---------------------|--------------|
+| "décisions entre 25 et 30 janvier" | ❌ Retourne 18 janv | ✅ Filtré correctement | — |
+| "tous les bugs website_joyjuice" | ⚠️ Incomplet | — | ✅ Agrégation par entité |
+| "pourquoi layout produit changé" | ✅ Score 3.70 | — | — |
+
+---
+
+## 12. Autres Papiers Analysés (Février 2026)
+
+| Paper | arXiv | Décision |
+|-------|-------|----------|
+| **MCP-Zero** (Active Tool Discovery) | 2506.01056 | **Rejeté** — Ahmed gère manuellement les MCP |
+| **MemSearcher** (Mémoire compacte RL) | 2511.02805 | Pattern intéressant, RL non reproductible |
+| **MAKER** (1M étapes zéro erreurs) | 2511.09030 | Voting + red-flagging pour `/rlm-parallel` (futur) |
+| **EverMemOS** (OS mémoire engrams) | 2601.02163 | MemScenes pour Phase 8+ (regroupement thématique) |
+| **LADDER** (Auto-amélioration récursive) | 2503.00735 | Pas applicable comme outil MCP |
+| **CREATOR** (Création autonome d'outils) | 2305.14318 | Auto-génération MCP tools (futur lointain) |
+
+---
+
+## 13. Score de Couverture Mis à Jour
+
+**Concepts paper RLM MIT** : 22/26 = **85%**
+**Concepts MAGMA retenus** : 2/6 = **33%** (les 2 plus utiles)
+**Total concepts planned** : 24/32 = **75%** (focus sur l'utile, pas l'exhaustif)
 
 ---
 
