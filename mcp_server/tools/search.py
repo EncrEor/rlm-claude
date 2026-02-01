@@ -190,12 +190,14 @@ def search(
     domain: str = None,
     date_from: str = None,
     date_to: str = None,
+    entity: str = None,
 ) -> dict:
     """
     Convenience function for searching chunks.
 
     Phase 5.5c: Supports filtering by project and domain.
     Phase 7.1: Supports temporal filtering by date range.
+    Phase 7.2: Supports filtering by entity.
 
     Args:
         query: Natural language search query
@@ -204,11 +206,12 @@ def search(
         domain: Filter by domain (Phase 5.5c)
         date_from: Start date inclusive, YYYY-MM-DD (Phase 7.1)
         date_to: End date inclusive, YYYY-MM-DD (Phase 7.1)
+        entity: Filter by entity name, case-insensitive substring (Phase 7.2)
 
     Returns:
         Dictionary with search results
     """
-    from .navigation import _chunk_in_date_range
+    from .navigation import _chunk_in_date_range, _entity_matches
 
     searcher = RLMSearch()
 
@@ -218,8 +221,8 @@ def search(
     except ImportError as e:
         return {"status": "error", "message": str(e), "results": []}
 
-    # Phase 5.5c + 7.1: Filter by project/domain/date if specified
-    has_filters = project or domain or date_from or date_to
+    # Phase 5.5c + 7.1 + 7.2: Filter by project/domain/date/entity if specified
+    has_filters = project or domain or date_from or date_to or entity
     if has_filters:
         # Load index to get chunk metadata
         index_file = CONTEXT_DIR / "index.json"
@@ -240,6 +243,9 @@ def search(
                     continue
                 if domain and meta.get("domain") != domain:
                     continue
+                # Phase 7.2: Entity filter
+                if entity and not _entity_matches(meta, entity):
+                    continue
                 filtered.append(r)
             results = filtered
 
@@ -256,6 +262,8 @@ def search(
         active_filters["date_from"] = date_from
     if date_to:
         active_filters["date_to"] = date_to
+    if entity:
+        active_filters["entity"] = entity
 
     return {
         "status": "success",

@@ -8,11 +8,10 @@ Provides:
 """
 
 import json
-import pytest
-import shutil
-import tempfile
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
+
+import pytest
 
 
 @pytest.fixture
@@ -24,39 +23,42 @@ def temp_context_dir(tmp_path):
 
     # Initialize empty index
     index_file = context_dir / "index.json"
-    index_file.write_text(json.dumps({
-        "version": "2.1.0",
-        "chunks": [],
-        "total_tokens_estimate": 0
-    }, indent=2))
+    index_file.write_text(
+        json.dumps({"version": "2.1.0", "chunks": [], "total_tokens_estimate": 0}, indent=2)
+    )
 
     # Initialize empty memory
     memory_file = context_dir / "session_memory.json"
-    memory_file.write_text(json.dumps({
-        "version": "1.0.0",
-        "insights": [],
-        "created": datetime.now().isoformat(),
-        "last_updated": datetime.now().isoformat()
-    }, indent=2))
+    memory_file.write_text(
+        json.dumps(
+            {
+                "version": "1.0.0",
+                "insights": [],
+                "created": datetime.now().isoformat(),
+                "last_updated": datetime.now().isoformat(),
+            },
+            indent=2,
+        )
+    )
 
     # Initialize empty sessions
     sessions_file = context_dir / "sessions.json"
-    sessions_file.write_text(json.dumps({
-        "version": "1.0.0",
-        "current_session": None,
-        "sessions": {}
-    }, indent=2))
+    sessions_file.write_text(
+        json.dumps({"version": "1.0.0", "current_session": None, "sessions": {}}, indent=2)
+    )
 
     # Initialize default domains
     domains_file = context_dir / "domains.json"
-    domains_file.write_text(json.dumps({
-        "domains": {
-            "default": {
-                "description": "Default domains",
-                "list": ["test", "dev", "prod"]
-            }
-        }
-    }, indent=2))
+    domains_file.write_text(
+        json.dumps(
+            {
+                "domains": {
+                    "default": {"description": "Default domains", "list": ["test", "dev", "prod"]}
+                }
+            },
+            indent=2,
+        )
+    )
 
     yield context_dir
 
@@ -98,26 +100,28 @@ def sample_chunks(temp_context_dir):
         # Write chunk file
         chunk_file = chunks_dir / f"{chunk['id']}.md"
         content = f"""---
-summary: {chunk['summary']}
-tags: {', '.join(chunk['tags'])}
+summary: {chunk["summary"]}
+tags: {", ".join(chunk["tags"])}
 created: 2026-01-18T10:00:00
 ---
 
-{chunk['content']}
+{chunk["content"]}
 """
         chunk_file.write_text(content)
 
         # Add to index
-        index_chunks.append({
-            "id": chunk["id"],
-            "summary": chunk["summary"],
-            "tags": chunk["tags"],
-            "tokens_estimate": len(chunk["content"].split()) * 2,
-            "created": "2026-01-18T10:00:00",
-            "access_count": 0,
-            "project": chunk.get("project", ""),
-            "domain": chunk.get("domain", ""),
-        })
+        index_chunks.append(
+            {
+                "id": chunk["id"],
+                "summary": chunk["summary"],
+                "tags": chunk["tags"],
+                "tokens_estimate": len(chunk["content"].split()) * 2,
+                "created": "2026-01-18T10:00:00",
+                "access_count": 0,
+                "project": chunk.get("project", ""),
+                "domain": chunk.get("domain", ""),
+            }
+        )
 
     # Update index
     index = json.loads(index_file.read_text())
@@ -171,6 +175,7 @@ def mock_context_paths(temp_context_dir, monkeypatch):
 # Helper functions
 # =============================================================================
 
+
 def create_chunk(chunks_dir: Path, chunk_id: str, content: str, **metadata) -> Path:
     """Helper to create a chunk file."""
     chunk_file = chunks_dir / f"{chunk_id}.md"
@@ -180,7 +185,7 @@ def create_chunk(chunks_dir: Path, chunk_id: str, content: str, **metadata) -> P
 
     chunk_content = f"""---
 summary: {summary}
-tags: {', '.join(tags) if tags else ''}
+tags: {", ".join(tags) if tags else ""}
 created: {datetime.now().isoformat()}
 ---
 

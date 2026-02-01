@@ -10,11 +10,10 @@ Tests cover:
 - Preview and run tools
 """
 
-import gzip
 import json
-import pytest
 from datetime import datetime, timedelta
-from pathlib import Path
+
+import pytest
 
 # Fixtures are automatically discovered from conftest.py by pytest
 
@@ -23,11 +22,13 @@ from pathlib import Path
 # FIXTURES
 # =============================================================================
 
+
 @pytest.fixture
 def retention_context(temp_context_dir, monkeypatch):
     """Set up context with retention module patched."""
     # Patch paths in retention module
     import mcp_server.tools.retention as retention
+
     monkeypatch.setattr(retention, "CONTEXT_DIR", temp_context_dir)
     monkeypatch.setattr(retention, "CHUNKS_DIR", temp_context_dir / "chunks")
     monkeypatch.setattr(retention, "ARCHIVE_DIR", temp_context_dir / "archive")
@@ -100,24 +101,26 @@ def old_chunks(retention_context):
         # Write chunk file
         chunk_file = chunks_dir / f"{chunk['id']}.md"
         chunk_file.write_text(f"""---
-summary: {chunk['summary']}
-tags: {', '.join(chunk['tags'])}
-created_at: {chunk['created_at']}
+summary: {chunk["summary"]}
+tags: {", ".join(chunk["tags"])}
+created_at: {chunk["created_at"]}
 ---
 
-{chunk['content']}
+{chunk["content"]}
 """)
 
         # Add to index
-        index_chunks.append({
-            "id": chunk["id"],
-            "file": f"chunks/{chunk['id']}.md",
-            "summary": chunk["summary"],
-            "tags": chunk["tags"],
-            "tokens_estimate": len(chunk["content"].split()) * 2,
-            "created_at": chunk["created_at"],
-            "access_count": chunk["access_count"],
-        })
+        index_chunks.append(
+            {
+                "id": chunk["id"],
+                "file": f"chunks/{chunk['id']}.md",
+                "summary": chunk["summary"],
+                "tags": chunk["tags"],
+                "tokens_estimate": len(chunk["content"].split()) * 2,
+                "created_at": chunk["created_at"],
+                "access_count": chunk["access_count"],
+            }
+        )
 
     # Update index
     index = json.loads(index_file.read_text())
@@ -130,6 +133,7 @@ created_at: {chunk['created_at']}
 # =============================================================================
 # IMMUNITY TESTS
 # =============================================================================
+
 
 def test_is_immune_by_tag(retention_context, old_chunks):
     """Chunks with protected tags (critical, decision, keep, important) are immune."""
@@ -175,6 +179,7 @@ def test_not_immune_regular_chunk(retention_context, old_chunks):
 # CANDIDATE DETECTION TESTS
 # =============================================================================
 
+
 def test_get_archive_candidates(retention_context, old_chunks):
     """get_archive_candidates returns only eligible chunks."""
     from mcp_server.tools.retention import get_archive_candidates
@@ -189,7 +194,7 @@ def test_get_archive_candidates(retention_context, old_chunks):
     assert "old_accessed_002" not in candidate_ids  # High access count
     assert "old_critical_003" not in candidate_ids  # Critical tag
     assert "old_decision_004" not in candidate_ids  # DECISION: keyword
-    assert "recent_005" not in candidate_ids        # Too recent
+    assert "recent_005" not in candidate_ids  # Too recent
 
 
 def test_get_archive_candidates_empty_when_all_protected(retention_context):
@@ -213,14 +218,16 @@ This is protected.
 """)
 
     index = json.loads(index_file.read_text())
-    index["chunks"] = [{
-        "id": "protected_001",
-        "file": "chunks/protected_001.md",
-        "summary": "Protected chunk",
-        "tags": ["critical"],
-        "created_at": recent_date,
-        "access_count": 0,
-    }]
+    index["chunks"] = [
+        {
+            "id": "protected_001",
+            "file": "chunks/protected_001.md",
+            "summary": "Protected chunk",
+            "tags": ["critical"],
+            "created_at": recent_date,
+            "access_count": 0,
+        }
+    ]
     index_file.write_text(json.dumps(index, indent=2))
 
     candidates = get_archive_candidates()
@@ -230,6 +237,7 @@ This is protected.
 # =============================================================================
 # ARCHIVE OPERATION TESTS
 # =============================================================================
+
 
 def test_archive_chunk(retention_context, old_chunks):
     """archive_chunk compresses and moves chunk to archive."""
@@ -282,6 +290,7 @@ def test_archive_chunk_already_archived(retention_context, old_chunks):
 # RESTORE OPERATION TESTS
 # =============================================================================
 
+
 def test_restore_chunk(retention_context, old_chunks):
     """restore_chunk decompresses archive back to active storage."""
     from mcp_server.tools.retention import archive_chunk, restore_chunk
@@ -321,9 +330,10 @@ def test_restore_chunk_not_found(retention_context):
 # PURGE OPERATION TESTS
 # =============================================================================
 
+
 def test_purge_chunk(retention_context, old_chunks):
     """purge_chunk deletes archive and logs metadata."""
-    from mcp_server.tools.retention import archive_chunk, purge_chunk, _load_purge_log
+    from mcp_server.tools.retention import _load_purge_log, archive_chunk, purge_chunk
 
     archive_dir = retention_context / "archive"
 
@@ -346,7 +356,7 @@ def test_purge_chunk(retention_context, old_chunks):
 
 def test_purge_log_contains_metadata(retention_context, old_chunks):
     """Purge log contains metadata but not content."""
-    from mcp_server.tools.retention import archive_chunk, purge_chunk, _load_purge_log
+    from mcp_server.tools.retention import _load_purge_log, archive_chunk, purge_chunk
 
     # Archive and purge
     archive_chunk("old_unused_001")
@@ -367,6 +377,7 @@ def test_purge_log_contains_metadata(retention_context, old_chunks):
 # =============================================================================
 # PREVIEW AND RUN TESTS
 # =============================================================================
+
 
 def test_retention_preview(retention_context, old_chunks):
     """retention_preview shows candidates without executing."""
@@ -421,10 +432,11 @@ def test_retention_run_empty_when_no_candidates(retention_context):
 # AUTO-RESTORE TESTS
 # =============================================================================
 
+
 def test_auto_restore_on_peek(retention_context, old_chunks, monkeypatch):
     """peek() auto-restores archived chunks."""
-    from mcp_server.tools.retention import archive_chunk
     import mcp_server.tools.navigation as navigation
+    from mcp_server.tools.retention import archive_chunk
 
     # Patch navigation paths too
     monkeypatch.setattr(navigation, "CONTEXT_DIR", retention_context)
@@ -449,9 +461,10 @@ def test_auto_restore_on_peek(retention_context, old_chunks, monkeypatch):
 # INDEX CONSISTENCY TESTS
 # =============================================================================
 
+
 def test_index_updated_after_archive(retention_context, old_chunks):
     """Index is updated correctly after archiving."""
-    from mcp_server.tools.retention import archive_chunk, _load_index, _load_archive_index
+    from mcp_server.tools.retention import _load_archive_index, _load_index, archive_chunk
 
     index_before = _load_index()
     ids_before = [c["id"] for c in index_before["chunks"]]
@@ -474,7 +487,10 @@ def test_index_updated_after_archive(retention_context, old_chunks):
 def test_index_updated_after_restore(retention_context, old_chunks):
     """Index is updated correctly after restoring."""
     from mcp_server.tools.retention import (
-        archive_chunk, restore_chunk, _load_index, _load_archive_index
+        _load_archive_index,
+        _load_index,
+        archive_chunk,
+        restore_chunk,
     )
 
     # Archive first

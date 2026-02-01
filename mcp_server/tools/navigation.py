@@ -284,6 +284,146 @@ def _chunk_in_date_range(chunk_info: dict, date_from: str | None, date_to: str |
     return True
 
 
+def _extract_entities(content: str, max_entities: int = 50) -> dict:
+    """
+    Extract named entities from chunk content (Phase 7.2, MAGMA-inspired).
+
+    Uses regex patterns to identify domain-specific entities:
+    files, versions, modules, tickets, and functions.
+
+    Zero external dependencies — pattern-based extraction only.
+
+    Args:
+        content: Text content to extract entities from
+        max_entities: Maximum total entities across all types (default: 50)
+
+    Returns:
+        Dictionary with typed entity lists:
+        {"files": [...], "versions": [...], "modules": [...],
+         "tickets": [...], "functions": [...]}
+    """
+    entities: dict[str, set[str]] = {
+        "files": set(),
+        "versions": set(),
+        "modules": set(),
+        "tickets": set(),
+        "functions": set(),
+    }
+
+    if not content or not content.strip():
+        return {k: sorted(v) for k, v in entities.items()}
+
+    # 1. Files: paths with common extensions
+    file_pattern = re.compile(
+        r"(?:^|[\s`\"'(,;|])("
+        r"(?:[\w./\\-]+/)?"  # optional directory prefix
+        r"[\w.-]+"  # filename
+        r"\.(?:py|js|ts|jsx|tsx|md|xml|json|css|html|yml|yaml|toml|cfg|conf|sh|sql|csv)"
+        r")"
+        r"(?:[\s`\"'),:;|]|$)",
+        re.MULTILINE,
+    )
+    for m in file_pattern.finditer(content):
+        entities["files"].add(m.group(1))
+
+    # 2. Versions: vX.Y.Z or X.Y.Z.W (3+ segments)
+    version_pattern = re.compile(
+        r"(?:^|[\s`\"'(,;|v])"
+        r"(v?\d+\.\d+\.\d+(?:\.\d+)*)"
+        r"(?:[\s`\"'),:;|]|$)",
+        re.MULTILINE,
+    )
+    for m in version_pattern.finditer(content):
+        v = m.group(1)
+        # Skip dates (YYYY-MM-DD looks like 3 segments but has 4-digit first)
+        if re.match(r"^\d{4}\.\d{2}\.\d{2}$", v):
+            continue
+        entities["versions"].add(v)
+
+    # 3. Modules: snake_case identifiers after keywords
+    # Pattern allows optional intermediate keywords (e.g., "install module X")
+    module_pattern = re.compile(
+        r"(?:pip\s+install|import|from|module|package|install)"
+        r"(?:\s+(?:module|package))?"  # optional second keyword
+        r"\s+([a-z][a-z0-9_]+(?:\.[a-z][a-z0-9_]+)*)",
+        re.IGNORECASE,
+    )
+    skip_modules = {
+        "the",
+        "for",
+        "and",
+        "not",
+        "all",
+        "module",
+        "install",
+        "package",
+        "import",
+        "from",
+        "pip",
+        "with",
+        "this",
+        "that",
+    }
+    for m in module_pattern.finditer(content):
+        mod = m.group(1).lower()
+        # Skip very short or common words
+        if len(mod) > 2 and mod not in skip_modules:
+            entities["modules"].add(mod)
+
+    # 4. Tickets: PREFIX-123 format (2+ uppercase letters, dash, 1+ digits)
+    ticket_pattern = re.compile(r"\b([A-Z]{2,}-\d+)\b")
+    for m in ticket_pattern.finditer(content):
+        entities["tickets"].add(m.group(1))
+
+    # 5. Functions: identifier() pattern
+    func_pattern = re.compile(r"\b([a-zA-Z_][a-zA-Z0-9_]*)\(\)")
+    for m in func_pattern.finditer(content):
+        fn = m.group(1)
+        # Skip very short or common patterns
+        if len(fn) > 1 and fn not in ("if", "for", "in"):
+            entities["functions"].add(f"{fn}()")
+
+    # Enforce max_entities limit (distribute evenly then fill)
+    result = {}
+    total = 0
+    for key in entities:
+        sorted_vals = sorted(entities[key])
+        remaining = max_entities - total
+        if remaining <= 0:
+            result[key] = []
+        else:
+            result[key] = sorted_vals[:remaining]
+            total += len(result[key])
+
+    return result
+
+
+def _entity_matches(chunk_info: dict, entity: str) -> bool:
+    """
+    Check if a chunk's entities contain a given entity (Phase 7.2).
+
+    Performs case-insensitive substring matching across all entity types.
+
+    Args:
+        chunk_info: Chunk metadata dict from index.json
+        entity: Entity string to search for
+
+    Returns:
+        True if any stored entity matches, False otherwise
+    """
+    chunk_entities = chunk_info.get("entities", {})
+    if not chunk_entities or not isinstance(chunk_entities, dict):
+        return False
+
+    entity_lower = entity.lower()
+    for vals in chunk_entities.values():
+        if isinstance(vals, list):
+            for e in vals:
+                if entity_lower in str(e).lower():
+                    return True
+    return False
+
+
 def _check_duplicate(content_hash: str) -> dict | None:
     """
     Check if content with this hash already exists (Phase 4.2).
@@ -429,6 +569,9 @@ def chunk(
     if not summary:
         summary = _auto_summarize(content)
 
+    # Phase 7.2: Extract entities from content
+    entities = _extract_entities(content)
+
     # Phase 5.5: Generate ID with project/ticket/domain
     chunk_id = _generate_chunk_id(project=project, ticket=ticket, domain=domain)
     chunk_file = CHUNKS_DIR / f"{chunk_id}.md"
@@ -437,11 +580,20 @@ def chunk(
     # Resolve project for metadata (in case it was auto-detected)
     resolved_project = project if project else _detect_project()
 
+    # Build entities string for YAML header
+    entities_yaml_parts = []
+    for etype, evals in entities.items():
+        if evals:
+            entities_yaml_parts.append(f"  {etype}: {', '.join(evals)}")
+    entities_yaml = "\n".join(entities_yaml_parts) if entities_yaml_parts else "  (none)"
+
     # Create chunk file with metadata header
     header = f"""---
 id: {chunk_id}
 summary: {summary}
 tags: {", ".join(tags or [])}
+entities:
+{entities_yaml}
 project: {resolved_project}
 ticket: {ticket or ""}
 domain: {domain or ""}
@@ -473,6 +625,8 @@ format_version: "2.0"
             "ticket": ticket,
             "domain": domain,
             "format_version": "2.0",
+            # Phase 7.2 fields
+            "entities": entities,
         }
     )
     index["total_tokens_estimate"] = sum(c["tokens_estimate"] for c in index["chunks"])
@@ -595,6 +749,7 @@ def grep(
     fuzzy_threshold: int = 80,
     date_from: str = None,
     date_to: str = None,
+    entity: str = None,
 ) -> dict:
     """
     Search for a pattern across all chunks.
@@ -605,6 +760,7 @@ def grep(
     Phase 5.2: Supports fuzzy matching (tolerates typos).
     Phase 5.5c: Supports filtering by project and domain.
     Phase 7.1: Supports temporal filtering by date range.
+    Phase 7.2: Supports filtering by entity.
 
     Args:
         pattern: Text or regex pattern to search for
@@ -616,13 +772,16 @@ def grep(
         fuzzy_threshold: Minimum similarity score 0-100 (Phase 5.2)
         date_from: Start date inclusive, YYYY-MM-DD (Phase 7.1)
         date_to: End date inclusive, YYYY-MM-DD (Phase 7.1)
+        entity: Filter by entity name, case-insensitive substring (Phase 7.2)
 
     Returns:
         Dictionary with list of matches
     """
     # Phase 5.2: Dispatch to fuzzy search if enabled
     if fuzzy:
-        return grep_fuzzy(pattern, fuzzy_threshold, limit, project, domain, date_from, date_to)
+        return grep_fuzzy(
+            pattern, fuzzy_threshold, limit, project, domain, date_from, date_to, entity
+        )
 
     index = _load_index()
     matches = []
@@ -641,6 +800,9 @@ def grep(
         if project and chunk_info.get("project") != project:
             continue
         if domain and chunk_info.get("domain") != domain:
+            continue
+        # Phase 7.2: Apply entity filter
+        if entity and not _entity_matches(chunk_info, entity):
             continue
         chunk_file = CONTEXT_DIR / chunk_info["file"]
 
@@ -706,6 +868,7 @@ def grep_fuzzy(
     domain: str = None,
     date_from: str = None,
     date_to: str = None,
+    entity: str = None,
 ) -> dict:
     """
     Fuzzy grep - find matches even with typos (Phase 5.2).
@@ -714,6 +877,7 @@ def grep_fuzzy(
     Tolerates typos like "validaton" finding "validation".
 
     Phase 7.1: Supports temporal filtering by date range.
+    Phase 7.2: Supports filtering by entity.
 
     Args:
         pattern: Text to search for (not regex, fuzzy matching)
@@ -723,6 +887,7 @@ def grep_fuzzy(
         domain: Filter by domain (Phase 5.5c)
         date_from: Start date inclusive, YYYY-MM-DD (Phase 7.1)
         date_to: End date inclusive, YYYY-MM-DD (Phase 7.1)
+        entity: Filter by entity name, case-insensitive substring (Phase 7.2)
 
     Returns:
         Dictionary with matches sorted by similarity score
@@ -744,6 +909,9 @@ def grep_fuzzy(
         if project and chunk_info.get("project") != project:
             continue
         if domain and chunk_info.get("domain") != domain:
+            continue
+        # Phase 7.2: Apply entity filter
+        if entity and not _entity_matches(chunk_info, entity):
             continue
 
         chunk_file = CONTEXT_DIR / chunk_info["file"]

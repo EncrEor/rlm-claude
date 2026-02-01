@@ -7,8 +7,16 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-### Planned — Phase 7: MAGMA-Inspired Search Upgrade
-- **7.2** Entity extraction: Auto-extract entities (files, modules, versions) at `rlm_chunk()` time
+### Added — Phase 7.2: Entity Extraction (COMPLETE)
+- `_extract_entities(content)` — regex-based extraction of files, versions, modules, tickets, functions
+- `_entity_matches(chunk_info, entity)` — case-insensitive substring matching across all entity types
+- `entity` param on `rlm_grep` — filter grep/fuzzy results by entity
+- `entity` param on `rlm_search` — filter BM25 results by entity
+- Auto-extraction at `rlm_chunk()` time — entities stored in index.json and YAML frontmatter
+- Typed storage: `{"files": [...], "versions": [...], "modules": [...], "tickets": [...], "functions": [...]}`
+- 36 tests in `tests/test_entity_extraction.py` (extraction, matching, grep filter, search filter)
+- Zero external dependencies (regex-only, MAGMA-inspired lightweight approach)
+- Backward compatible: existing chunks without entities treated as `{}`
 
 ### Added — Phase 7.1: Temporal Filtering (COMPLETE)
 - `date_from`/`date_to` params on `rlm_search` — filter BM25 results by date range

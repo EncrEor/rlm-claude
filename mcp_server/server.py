@@ -268,6 +268,7 @@ def rlm_grep(
     fuzzy_threshold: int = 80,
     date_from: str = "",
     date_to: str = "",
+    entity: str = "",
 ) -> str:
     """
     Search for a pattern across all saved chunks.
@@ -278,6 +279,7 @@ def rlm_grep(
     Phase 5.2: Supports fuzzy matching (tolerates typos like "validaton" → "validation").
     Phase 5.5c: Supports filtering by project and domain.
     Phase 7.1: Supports temporal filtering by date range.
+    Phase 7.2: Supports filtering by entity.
 
     Args:
         pattern: Text or regex pattern to search for (case-insensitive)
@@ -288,6 +290,7 @@ def rlm_grep(
         fuzzy_threshold: Minimum similarity score 0-100 for fuzzy (default: 80)
         date_from: Start date inclusive, YYYY-MM-DD (e.g., "2026-01-25")
         date_to: End date inclusive, YYYY-MM-DD (e.g., "2026-01-30")
+        entity: Filter by entity name (file, module, version, etc.)
 
     Returns:
         List of matches with chunk IDs and context
@@ -301,6 +304,7 @@ def rlm_grep(
         fuzzy_threshold=fuzzy_threshold,
         date_from=date_from if date_from else None,
         date_to=date_to if date_to else None,
+        entity=entity if entity else None,
     )
 
     # Handle error (e.g., thefuzz not installed)
@@ -342,6 +346,7 @@ def rlm_search(
     domain: str = "",
     date_from: str = "",
     date_to: str = "",
+    entity: str = "",
 ) -> str:
     """
     Search chunks using BM25 ranking (Phase 5.1).
@@ -353,6 +358,7 @@ def rlm_search(
 
     Phase 5.5c: Supports filtering by project and domain.
     Phase 7.1: Supports temporal filtering by date range.
+    Phase 7.2: Supports filtering by entity.
 
     Args:
         query: Natural language search query (e.g., "business plan discussion")
@@ -361,6 +367,7 @@ def rlm_search(
         domain: Filter by domain (e.g., "bp", "seo", "r&d")
         date_from: Start date inclusive, YYYY-MM-DD (e.g., "2026-01-25")
         date_to: End date inclusive, YYYY-MM-DD (e.g., "2026-01-30")
+        entity: Filter by entity name (file, module, version, etc.)
 
     Returns:
         Ranked list of matching chunks with scores
@@ -372,6 +379,7 @@ def rlm_search(
         domain=domain if domain else None,
         date_from=date_from if date_from else None,
         date_to=date_to if date_to else None,
+        entity=entity if entity else None,
     )
 
     if result["status"] == "error":

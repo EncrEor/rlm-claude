@@ -8,14 +8,13 @@ Tests:
 - Compound word splitting
 """
 
-import pytest
 import sys
 from pathlib import Path
 
 # Add mcp_server to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "mcp_server"))
 
-from tools.tokenizer_fr import tokenize_fr, normalize_accent
+from tools.tokenizer_fr import normalize_accent, tokenize_fr
 
 
 class TestNormalizeAccent:
@@ -147,7 +146,16 @@ class TestTokenizeFr:
         text = "Discussion sur le business plan Joy Juice - scenarios realistes pour 2026"
         tokens = tokenize_fr(text)
 
-        expected = ["discussion", "business", "plan", "joy", "juice", "scenarios", "realistes", "2026"]
+        expected = [
+            "discussion",
+            "business",
+            "plan",
+            "joy",
+            "juice",
+            "scenarios",
+            "realistes",
+            "2026",
+        ]
         for word in expected:
             assert word in tokens, f"Expected '{word}' in tokens"
 
@@ -169,7 +177,7 @@ class TestEdgeCases:
 
     def test_unicode_handling(self):
         """Unicode characters should be handled gracefully."""
-        tokens = tokenize_fr("Test avec emoji \U0001F600 et symboles")
+        tokens = tokenize_fr("Test avec emoji \U0001f600 et symboles")
         assert "test" in tokens
         assert "emoji" in tokens
         assert "symboles" in tokens

@@ -10,10 +10,10 @@ Tests:
 """
 
 import json
-import pytest
 import sys
 from pathlib import Path
-from unittest.mock import patch
+
+import pytest
 
 # Add mcp_server to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "mcp_server"))
@@ -31,14 +31,13 @@ class TestGrepFuzzyBasic:
 
         # Initialize index
         index_file = self.context_dir / "index.json"
-        index_file.write_text(json.dumps({
-            "version": "2.1.0",
-            "chunks": [],
-            "total_tokens_estimate": 0
-        }, indent=2))
+        index_file.write_text(
+            json.dumps({"version": "2.1.0", "chunks": [], "total_tokens_estimate": 0}, indent=2)
+        )
 
         # Patch the module paths
         import tools.navigation as nav
+
         monkeypatch.setattr(nav, "CONTEXT_DIR", self.context_dir)
         monkeypatch.setattr(nav, "CHUNKS_DIR", self.chunks_dir)
         monkeypatch.setattr(nav, "INDEX_FILE", self.context_dir / "index.json")
@@ -56,7 +55,7 @@ class TestGrepFuzzyBasic:
 
         file_content = f"""---
 summary: {summary}
-tags: {', '.join(tags) if tags else ''}
+tags: {", ".join(tags) if tags else ""}
 project: {project}
 domain: {domain}
 created: 2026-01-19T10:00:00
@@ -69,16 +68,18 @@ created: 2026-01-19T10:00:00
         # Update index
         index_file = self.context_dir / "index.json"
         index = json.loads(index_file.read_text())
-        index["chunks"].append({
-            "id": chunk_id,
-            "file": f"chunks/{chunk_id}.md",
-            "summary": summary,
-            "tags": tags,
-            "project": project,
-            "domain": domain,
-            "tokens_estimate": len(content.split()) * 2,
-            "access_count": 0
-        })
+        index["chunks"].append(
+            {
+                "id": chunk_id,
+                "file": f"chunks/{chunk_id}.md",
+                "summary": summary,
+                "tags": tags,
+                "project": project,
+                "domain": domain,
+                "tokens_estimate": len(content.split()) * 2,
+                "access_count": 0,
+            }
+        )
         index_file.write_text(json.dumps(index, indent=2))
 
     def test_fuzzy_finds_exact_match(self):
@@ -159,13 +160,12 @@ class TestGrepFuzzyFilters:
         self.chunks_dir.mkdir(parents=True)
 
         index_file = self.context_dir / "index.json"
-        index_file.write_text(json.dumps({
-            "version": "2.1.0",
-            "chunks": [],
-            "total_tokens_estimate": 0
-        }, indent=2))
+        index_file.write_text(
+            json.dumps({"version": "2.1.0", "chunks": [], "total_tokens_estimate": 0}, indent=2)
+        )
 
         import tools.navigation as nav
+
         monkeypatch.setattr(nav, "CONTEXT_DIR", self.context_dir)
         monkeypatch.setattr(nav, "CHUNKS_DIR", self.chunks_dir)
         monkeypatch.setattr(nav, "INDEX_FILE", self.context_dir / "index.json")
@@ -182,7 +182,7 @@ class TestGrepFuzzyFilters:
 
         file_content = f"""---
 summary: {summary}
-tags: {', '.join(tags) if tags else ''}
+tags: {", ".join(tags) if tags else ""}
 project: {project}
 domain: {domain}
 created: 2026-01-19T10:00:00
@@ -194,16 +194,18 @@ created: 2026-01-19T10:00:00
 
         index_file = self.context_dir / "index.json"
         index = json.loads(index_file.read_text())
-        index["chunks"].append({
-            "id": chunk_id,
-            "file": f"chunks/{chunk_id}.md",
-            "summary": summary,
-            "tags": tags,
-            "project": project,
-            "domain": domain,
-            "tokens_estimate": 100,
-            "access_count": 0
-        })
+        index["chunks"].append(
+            {
+                "id": chunk_id,
+                "file": f"chunks/{chunk_id}.md",
+                "summary": summary,
+                "tags": tags,
+                "project": project,
+                "domain": domain,
+                "tokens_estimate": 100,
+                "access_count": 0,
+            }
+        )
         index_file.write_text(json.dumps(index, indent=2))
 
     def test_fuzzy_filter_by_project(self):
@@ -240,13 +242,12 @@ class TestGrepFuzzyIntegration:
         self.chunks_dir.mkdir(parents=True)
 
         index_file = self.context_dir / "index.json"
-        index_file.write_text(json.dumps({
-            "version": "2.1.0",
-            "chunks": [],
-            "total_tokens_estimate": 0
-        }, indent=2))
+        index_file.write_text(
+            json.dumps({"version": "2.1.0", "chunks": [], "total_tokens_estimate": 0}, indent=2)
+        )
 
         import tools.navigation as nav
+
         monkeypatch.setattr(nav, "CONTEXT_DIR", self.context_dir)
         monkeypatch.setattr(nav, "CHUNKS_DIR", self.chunks_dir)
         monkeypatch.setattr(nav, "INDEX_FILE", self.context_dir / "index.json")
@@ -269,15 +270,17 @@ created: 2026-01-19T10:00:00
 
         index_file = self.context_dir / "index.json"
         index = json.loads(index_file.read_text())
-        index["chunks"].append({
-            "id": chunk_id,
-            "file": f"chunks/{chunk_id}.md",
-            "summary": summary,
-            "project": metadata.get("project", ""),
-            "domain": metadata.get("domain", ""),
-            "tokens_estimate": 100,
-            "access_count": 0
-        })
+        index["chunks"].append(
+            {
+                "id": chunk_id,
+                "file": f"chunks/{chunk_id}.md",
+                "summary": summary,
+                "project": metadata.get("project", ""),
+                "domain": metadata.get("domain", ""),
+                "tokens_estimate": 100,
+                "access_count": 0,
+            }
+        )
         index_file.write_text(json.dumps(index, indent=2))
 
     def test_grep_dispatches_to_fuzzy(self):
@@ -313,13 +316,12 @@ class TestGrepFuzzyEdgeCases:
         self.chunks_dir.mkdir(parents=True)
 
         index_file = self.context_dir / "index.json"
-        index_file.write_text(json.dumps({
-            "version": "2.1.0",
-            "chunks": [],
-            "total_tokens_estimate": 0
-        }, indent=2))
+        index_file.write_text(
+            json.dumps({"version": "2.1.0", "chunks": [], "total_tokens_estimate": 0}, indent=2)
+        )
 
         import tools.navigation as nav
+
         monkeypatch.setattr(nav, "CONTEXT_DIR", self.context_dir)
         monkeypatch.setattr(nav, "CHUNKS_DIR", self.chunks_dir)
         monkeypatch.setattr(nav, "INDEX_FILE", self.context_dir / "index.json")
@@ -343,15 +345,17 @@ class TestGrepFuzzyEdgeCases:
 
             index_file = self.context_dir / "index.json"
             index = json.loads(index_file.read_text())
-            index["chunks"].append({
-                "id": chunk_id,
-                "file": f"chunks/{chunk_id}.md",
-                "summary": f"Test {i}",
-                "project": "",
-                "domain": "",
-                "tokens_estimate": 10,
-                "access_count": 0
-            })
+            index["chunks"].append(
+                {
+                    "id": chunk_id,
+                    "file": f"chunks/{chunk_id}.md",
+                    "summary": f"Test {i}",
+                    "project": "",
+                    "domain": "",
+                    "tokens_estimate": 10,
+                    "access_count": 0,
+                }
+            )
             index_file.write_text(json.dumps(index, indent=2))
 
         result = self.nav.grep_fuzzy("test", threshold=50, limit=5)
@@ -383,13 +387,12 @@ class TestRealWorldScenarios:
         self.chunks_dir.mkdir(parents=True)
 
         index_file = self.context_dir / "index.json"
-        index_file.write_text(json.dumps({
-            "version": "2.1.0",
-            "chunks": [],
-            "total_tokens_estimate": 0
-        }, indent=2))
+        index_file.write_text(
+            json.dumps({"version": "2.1.0", "chunks": [], "total_tokens_estimate": 0}, indent=2)
+        )
 
         import tools.navigation as nav
+
         monkeypatch.setattr(nav, "CONTEXT_DIR", self.context_dir)
         monkeypatch.setattr(nav, "CHUNKS_DIR", self.chunks_dir)
         monkeypatch.setattr(nav, "INDEX_FILE", self.context_dir / "index.json")
@@ -412,15 +415,17 @@ created: 2026-01-19T10:00:00
 
         index_file = self.context_dir / "index.json"
         index = json.loads(index_file.read_text())
-        index["chunks"].append({
-            "id": chunk_id,
-            "file": f"chunks/{chunk_id}.md",
-            "summary": summary,
-            "project": metadata.get("project", ""),
-            "domain": metadata.get("domain", ""),
-            "tokens_estimate": 100,
-            "access_count": 0
-        })
+        index["chunks"].append(
+            {
+                "id": chunk_id,
+                "file": f"chunks/{chunk_id}.md",
+                "summary": summary,
+                "project": metadata.get("project", ""),
+                "domain": metadata.get("domain", ""),
+                "tokens_estimate": 100,
+                "access_count": 0,
+            }
+        )
         index_file.write_text(json.dumps(index, indent=2))
 
     def test_common_typo_buisness(self):
