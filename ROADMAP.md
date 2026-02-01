@@ -1201,19 +1201,24 @@ ruff format mcp_server/
 
 | Tache | Priorite | Statut |
 |-------|----------|--------|
-| Structure `tests/` avec conftest.py | P0 | A FAIRE |
+| Structure `tests/` avec conftest.py | P0 | FAIT |
+| Tests tokenizer (19 tests) | P0 | FAIT |
+| Tests fuzzy grep (16 tests) | P0 | FAIT |
+| Tests retention (20 tests) | P0 | FAIT |
 | Tests memory (remember/recall/forget) | P0 | A FAIRE |
 | Tests navigation (chunk/peek/grep) | P0 | A FAIRE |
-| Tests search (BM25, tokenizer) | P0 | A FAIRE |
+| Tests search (BM25) | P0 | A FAIRE |
 | Tests sessions | P0 | A FAIRE |
-| Coverage >= 80% | P0 | A FAIRE |
-| `.github/workflows/ci.yml` | P0 | FAIT |
-| `pyproject.toml` | P1 | FAIT |
+| Coverage >= 80% | P0 | A FAIRE (37% actuel) |
+| `.github/workflows/ci.yml` | P0 | FAIT (verte) |
+| `pyproject.toml` | P1 | FAIT (v0.9.0) |
+| `CHANGELOG.md` | P1 | FAIT |
+| README anglais + badges | P1 | FAIT |
+| GitHub Topics + Release v0.9.0 | P1 | FAIT |
+| Soumission annuaires MCP | P1 | EN COURS |
+| `uninstall.sh` | P1 | A FAIRE |
 | Publication TestPyPI | P1 | A FAIRE |
 | Publication PyPI | P1 | A FAIRE |
-| `CHANGELOG.md` | P1 | FAIT |
-| Badges README | P1 | A FAIRE |
-| Section Development README | P1 | A FAIRE |
 | Logging systeme | P2 | A FAIRE |
 | Atomic file writes | P2 | A FAIRE |
 | Error handling centralise | P2 | A FAIRE |

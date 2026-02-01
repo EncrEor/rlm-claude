@@ -434,19 +434,23 @@ Preparer RLM pour distribution publique (PyPI) et adoption par la communaute.
 | Tache | Priorite | Statut |
 |-------|----------|--------|
 | Structure `tests/` avec conftest.py | P0 | FAIT |
-| Tests tokenizer | P0 | FAIT |
+| Tests tokenizer (19 tests) | P0 | FAIT |
+| Tests fuzzy grep (16 tests) | P0 | FAIT |
+| Tests retention (20 tests) | P0 | FAIT |
 | Tests memory (remember/recall/forget) | P0 | A FAIRE |
 | Tests navigation (chunk/peek/grep) | P0 | A FAIRE |
 | Tests search (BM25) | P0 | A FAIRE |
 | Tests sessions | P0 | A FAIRE |
-| Coverage >= 80% | P0 | A FAIRE |
-| `.github/workflows/ci.yml` | P0 | FAIT (poussé sur GitHub) |
-| `pyproject.toml` | P1 | FAIT |
+| Coverage >= 80% | P0 | A FAIRE (37% actuel) |
+| `.github/workflows/ci.yml` | P0 | FAIT (verte, 55/55 tests) |
+| `pyproject.toml` | P1 | FAIT (v0.9.0) |
 | `CHANGELOG.md` | P1 | FAIT |
+| README anglais + badges | P1 | FAIT (01/02/2026) |
+| GitHub Topics + Release v0.9.0 | P1 | FAIT (01/02/2026) |
+| Soumission annuaires MCP | P1 | EN COURS (mcp.so soumis) |
+| `uninstall.sh` | P1 | A FAIRE |
 | Publication TestPyPI | P1 | A FAIRE |
 | Publication PyPI | P1 | A FAIRE |
-| Badges README | P1 | A FAIRE |
-| Section Development README | P1 | A FAIRE |
 
 ### Fichiers crees (2026-01-19)
 
@@ -485,7 +489,9 @@ rlm_restore("chunk_id") -> Restaurer un chunk archive (Phase 5.6)
 ### Prochaines etapes
 - ~~**5.2 Grep++** : Fuzzy matching + scoring (thefuzz)~~ **FAIT** (v0.6.1)
 - ~~**5.6 Retention** : Archive/restore/purge + immunite auto~~ **FAIT** (v0.7.0)
-- **Phase 6 Tests** : Completer coverage 80%+ (prochain)
+- **Visibilite** : README EN, release v0.9.0, annuaires MCP, Reddit/dev.to **FAIT** (01/02/2026)
+- **uninstall.sh** : Demande par la communaute Reddit (prochain)
+- **Phase 6 Tests** : Completer coverage 80%+ (apres)
 
 ---
 
