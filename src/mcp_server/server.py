@@ -547,7 +547,7 @@ def rlm_retention_preview() -> str:
     """
     result = retention_preview()
 
-    output = ["Retention Preview (dry-run)\n=" * 40]
+    output = ["Retention Preview (dry-run)\n" + "=" * 40]
 
     # Archive candidates
     archive_count = result["archive_count"]
@@ -593,7 +593,7 @@ def rlm_retention_run(archive: bool = True, purge: bool = False) -> str:
     """
     result = retention_run(archive=archive, purge=purge)
 
-    output = ["Retention Execution\n=" * 40]
+    output = ["Retention Execution\n" + "=" * 40]
 
     # Archived
     if result["archived_count"] > 0:
