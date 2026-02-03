@@ -142,7 +142,8 @@ def recall(
 
             # Compter les tokens qui matchent
             matching = sum(
-                1 for token in query_tokens
+                1
+                for token in query_tokens
                 if token in content_lower or any(token in tag for tag in tags_lower)
             )
 
