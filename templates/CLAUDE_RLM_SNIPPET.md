@@ -1,83 +1,83 @@
-## RLM - MÉMOIRE PERSISTANTE (v0.10.0)
+## RLM - PERSISTENT MEMORY (v0.10.0)
 
-### Philosophie
+### Philosophy
 
-L'utilisateur décide quand chunker. Le système sauvegarde automatiquement avant /compact.
+The user decides when to chunk. The system automatically saves before /compact.
 
-### Début de session (obligatoire)
+### Session startup (required)
 
 ```python
-# 1. Charger les règles universelles
+# 1. Load universal rules
 rlm_recall(importance="critical")
 
-# 2. Si travail sur un sujet spécifique, charger le contexte
-rlm_recall(query="le_sujet")
+# 2. If working on a specific topic, load context
+rlm_recall(query="the_topic")
 
-# 3. Status mémoire
+# 3. Memory status
 rlm_status()
 ```
 
-### Quand chunker (réflexe Claude)
+### When to chunk (Claude reflex)
 
-**Chunk proactivement quand :**
-- Décision importante prise
-- Tâche terminée avec succès
-- Insight ou règle découverte
-- Changement de sujet majeur
-- Bug corrigé (documenter la cause)
+**Chunk proactively when:**
+- Important decision made
+- Task completed successfully
+- Insight or rule discovered
+- Major topic change
+- Bug fixed (document the cause)
 
-**Chunk sur instruction utilisateur :**
-- "garde ça en mémoire"
-- "chunk cette discussion"
-- "rlm_remember cette décision"
+**Chunk on user instruction:**
+- "remember this"
+- "chunk this discussion"
+- "rlm_remember this decision"
 
-### Types de chunks (chunk_type)
+### Chunk types (chunk_type)
 
 | Type | Usage |
 |------|-------|
-| `session` | Log de session (défaut) |
-| `snapshot` | État d'un sujet à l'instant T |
+| `session` | Session log (default) |
+| `snapshot` | State of a topic at a point in time |
 | `debug` | Bug + solution |
-| `insight` | Redirigé vers `rlm_remember()` |
+| `insight` | Redirected to `rlm_remember()` |
 
-### Niveaux d'importance (insights)
+### Importance levels (insights)
 
-| Importance | Quand l'utiliser |
-|------------|-----------------|
-| `critical` | Règle universelle (s'applique quel que soit le sujet) |
-| `high` | Règle liée à un sujet spécifique |
-| `medium` | Info utile, pas bloquante |
+| Importance | When to use |
+|------------|------------|
+| `critical` | Universal rule (applies regardless of topic) |
+| `high` | Topic-specific rule |
+| `medium` | Useful info, not blocking |
 
-**Test** : "S'applique même si on parle d'un tout autre sujet ?" → `critical`
+**Test**: "Does this apply even when working on a completely different topic?" → `critical`
 
-### Sauvegarde automatique
+### Auto-save
 
-Le hook PreCompact crée un chunk minimal avant chaque /compact.
-Après le compact, tu peux lire ce chunk et l'enrichir si nécessaire.
+The PreCompact hook creates a minimal chunk before each /compact.
+After compaction, you can read this chunk and enrich it if needed.
 
-### Cette mémoire est LA TIENNE
+### This memory is YOURS
 
-Tu n'as pas besoin de demander permission pour :
-- Chunker l'historique
-- Sauvegarder des insights
-- Consulter ta mémoire
+You don't need permission to:
+- Chunk conversation history
+- Save insights
+- Search your memory
 
-C'est ton outil personnel de gestion de contexte.
+It's your personal context management tool.
 
-### Commandes utiles
+### Useful commands
 
 ```python
-# Sauvegarder un insight universel
-rlm_remember("contenu", category="decision", importance="critical", tags="universal")
+# Save a universal insight
+rlm_remember("content", category="decision", importance="critical", tags="universal")
 
-# Sauvegarder un insight contextuel
-rlm_remember("contenu", category="finding", importance="high", tags="odoo,weasyprint")
+# Save a topic-specific insight
+rlm_remember("content", category="finding", importance="high", tags="topic,subtopic")
 
-# Chunker une discussion (typé)
-rlm_chunk("résumé", summary="Session du 04/02", tags="session", chunk_type="session")
+# Chunk a discussion (typed)
+rlm_chunk("summary", summary="Session 04/02", tags="session", chunk_type="session")
 
-# Chercher dans l'historique
-rlm_search("sujet")
-rlm_recall(query="mot-clé")
-rlm_recall(importance="critical")  # règles universelles
+# Search history
+rlm_search("topic")
+rlm_recall(query="keyword")
+rlm_recall(importance="critical")  # all universal rules
 ```
