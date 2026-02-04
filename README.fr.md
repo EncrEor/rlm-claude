@@ -455,6 +455,21 @@ Voir [ROADMAP.md](ROADMAP.md) pour les détails.
 
 ---
 
+## Contribuer
+
+### Traductions
+
+Le dépôt est maintenu en anglais. Les fichiers destinés aux utilisateurs peuvent être traduits dans votre langue :
+
+| Fichier | Rôle | Traductions bienvenues |
+|---------|------|----------------------|
+| `README.md` | Documentation principale | `README.xx.md` (ex : `README.fr.md`, `README.ja.md`) |
+| `templates/CLAUDE_RLM_SNIPPET.md` | Instructions CLAUDE.md | `CLAUDE_RLM_SNIPPET.xx.md` |
+
+Le code, les commentaires et les messages de commit restent en anglais.
+
+---
+
 ## Auteurs
 
 - Ahmed MAKNI ([@EncrEor](https://github.com/EncrEor))

@@ -452,6 +452,21 @@ ls ~/.claude/rlm/hooks/                                  # インストール済
 
 ---
 
+## コントリビューション
+
+### 翻訳
+
+リポジトリは英語で管理されています。ユーザー向けファイルはお好みの言語に翻訳できます：
+
+| ファイル | 役割 | 翻訳歓迎 |
+|---------|------|---------|
+| `README.md` | メインドキュメント | `README.xx.md`（例：`README.fr.md`、`README.ja.md`） |
+| `templates/CLAUDE_RLM_SNIPPET.md` | CLAUDE.md用テンプレート | `CLAUDE_RLM_SNIPPET.xx.md` |
+
+コード、コメント、コミットメッセージは英語のままにしてください。
+
+---
+
 ## 著者
 
 - Ahmed MAKNI ([@EncrEor](https://github.com/EncrEor))

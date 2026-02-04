@@ -452,6 +452,21 @@ ls ~/.claude/rlm/hooks/                                  # Check installed hooks
 
 ---
 
+## Contributing
+
+### Translations
+
+The repository is maintained in English. User-facing files can be translated to your language:
+
+| File | Purpose | Translations welcome |
+|------|---------|---------------------|
+| `README.md` | Main documentation | `README.xx.md` (e.g., `README.fr.md`, `README.ja.md`) |
+| `templates/CLAUDE_RLM_SNIPPET.md` | CLAUDE.md instructions | `CLAUDE_RLM_SNIPPET.xx.md` |
+
+Code, comments, and commit messages stay in English.
+
+---
+
 ## Authors
 
 - Ahmed MAKNI ([@EncrEor](https://github.com/EncrEor))
