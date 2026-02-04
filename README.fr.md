@@ -202,18 +202,47 @@ python3 scripts/backfill_embeddings.py
 
 ## Exemples d'utilisation
 
+### Démarrage de session (recommandé)
+
+```python
+# Charger les règles universelles (applicables quel que soit le sujet)
+rlm_recall(importance="critical")
+
+# Charger le contexte du sujet en cours
+rlm_recall(query="deployment")
+
+# Vérifier l'état de la mémoire
+rlm_status()
+```
+
 ### Sauvegarder et retrouver des insights
 
 ```python
-# Sauvegarder une décision clé
-rlm_remember("Le backend est la source de vérité pour toutes les données",
-             category="decision", importance="high",
-             tags="architecture,backend")
+# Sauvegarder une règle universelle (chargée à chaque session)
+rlm_remember("Toujours déployer LOCAL → VPS, jamais en direct",
+             category="decision", importance="critical",
+             tags="deploy,workflow")
 
-# Le retrouver plus tard
+# Sauvegarder un insight lié à un sujet
+rlm_remember("WeasyPrint nécessite du CSS inline pour le rendu PDF",
+             category="finding", importance="high",
+             tags="weasyprint,pdf")
+
+# Retrouver des insights
 rlm_recall(query="source de vérité")
 rlm_recall(category="decision")
+rlm_recall(importance="critical")    # toutes les règles universelles
 ```
+
+### Niveaux d'importance
+
+| Niveau | Quand l'utiliser | Chargement |
+|--------|-----------------|------------|
+| `critical` | Règle universelle (s'applique quel que soit le sujet) | Chaque session |
+| `high` | Règle liée à un sujet spécifique | Quand on travaille sur ce sujet |
+| `medium` | Info utile, pas bloquante | Sur recherche explicite |
+
+**Test** : "Cette règle s'applique même si on travaille sur un tout autre sujet ?" Si oui → `critical`.
 
 ### Gérer l'historique de conversation
 

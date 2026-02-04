@@ -1,31 +1,59 @@
-## RLM - MÉMOIRE PERSISTANTE
+## RLM - MÉMOIRE PERSISTANTE (v0.10.0)
 
-### Philosophie (v0.9.0)
+### Philosophie
 
 L'utilisateur décide quand chunker. Le système sauvegarde automatiquement avant /compact.
+
+### Début de session (obligatoire)
+
+```python
+# 1. Charger les règles universelles
+rlm_recall(importance="critical")
+
+# 2. Si travail sur un sujet spécifique, charger le contexte
+rlm_recall(query="le_sujet")
+
+# 3. Status mémoire
+rlm_status()
+```
 
 ### Quand chunker (réflexe Claude)
 
 **Chunk proactivement quand :**
-- 🎯 Décision importante prise
-- ✅ Tâche terminée avec succès
-- 💡 Insight ou règle découverte
-- 🔄 Changement de sujet majeur
-- ⚠️ Bug corrigé (documenter la cause)
+- Décision importante prise
+- Tâche terminée avec succès
+- Insight ou règle découverte
+- Changement de sujet majeur
+- Bug corrigé (documenter la cause)
 
 **Chunk sur instruction utilisateur :**
 - "garde ça en mémoire"
 - "chunk cette discussion"
 - "rlm_remember cette décision"
 
+### Types de chunks (chunk_type)
+
+| Type | Usage |
+|------|-------|
+| `session` | Log de session (défaut) |
+| `snapshot` | État d'un sujet à l'instant T |
+| `debug` | Bug + solution |
+| `insight` | Redirigé vers `rlm_remember()` |
+
+### Niveaux d'importance (insights)
+
+| Importance | Quand l'utiliser |
+|------------|-----------------|
+| `critical` | Règle universelle (s'applique quel que soit le sujet) |
+| `high` | Règle liée à un sujet spécifique |
+| `medium` | Info utile, pas bloquante |
+
+**Test** : "S'applique même si on parle d'un tout autre sujet ?" → `critical`
+
 ### Sauvegarde automatique
 
 Le hook PreCompact crée un chunk minimal avant chaque /compact.
 Après le compact, tu peux lire ce chunk et l'enrichir si nécessaire.
-
-### Début de session
-
-Appeler `rlm_status()` pour voir l'état de la mémoire.
 
 ### Cette mémoire est LA TIENNE
 
@@ -39,16 +67,17 @@ C'est ton outil personnel de gestion de contexte.
 ### Commandes utiles
 
 ```python
-# Sauvegarder un insight
-rlm_remember("contenu", category="decision", importance="high")
+# Sauvegarder un insight universel
+rlm_remember("contenu", category="decision", importance="critical", tags="universal")
 
-# Chunker une discussion
-rlm_chunk("résumé de la discussion", summary="Session du 24/01", tags="session")
+# Sauvegarder un insight contextuel
+rlm_remember("contenu", category="finding", importance="high", tags="odoo,weasyprint")
+
+# Chunker une discussion (typé)
+rlm_chunk("résumé", summary="Session du 04/02", tags="session", chunk_type="session")
 
 # Chercher dans l'historique
 rlm_search("sujet")
-rlm_grep("pattern")
-
-# Voir l'état
-rlm_status()
+rlm_recall(query="mot-clé")
+rlm_recall(importance="critical")  # règles universelles
 ```

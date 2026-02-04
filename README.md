@@ -201,18 +201,47 @@ python3 scripts/backfill_embeddings.py
 
 ## Usage Examples
 
+### Session startup (recommended)
+
+```python
+# Load universal rules (apply regardless of topic)
+rlm_recall(importance="critical")
+
+# Load context for current topic
+rlm_recall(query="deployment")
+
+# Check memory status
+rlm_status()
+```
+
 ### Save and recall insights
 
 ```python
-# Save a key decision
-rlm_remember("Backend is the source of truth for all data",
-             category="decision", importance="high",
-             tags="architecture,backend")
+# Save a universal rule (loaded every session)
+rlm_remember("Always deploy LOCAL → VPS, never direct",
+             category="decision", importance="critical",
+             tags="deploy,workflow")
 
-# Find it later
+# Save a topic-specific insight
+rlm_remember("WeasyPrint requires inline CSS for PDF rendering",
+             category="finding", importance="high",
+             tags="weasyprint,pdf")
+
+# Find insights later
 rlm_recall(query="source of truth")
 rlm_recall(category="decision")
+rlm_recall(importance="critical")    # all universal rules
 ```
+
+### Importance levels
+
+| Level | When to use | Loaded |
+|-------|------------|--------|
+| `critical` | Universal rules (apply regardless of topic) | Every session |
+| `high` | Topic-specific rules | When working on that topic |
+| `medium` | Useful info, not blocking | On explicit search |
+
+**Test**: "Does this rule apply even when working on a completely different topic?" If yes → `critical`.
 
 ### Manage conversation history
 

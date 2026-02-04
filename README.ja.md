@@ -201,18 +201,47 @@ python3 scripts/backfill_embeddings.py
 
 ## 使用例
 
+### セッション開始時（推奨）
+
+```python
+# ユニバーサルルールを読み込み（トピックに関係なく適用）
+rlm_recall(importance="critical")
+
+# 現在のトピックのコンテキストを読み込み
+rlm_recall(query="deployment")
+
+# メモリステータスを確認
+rlm_status()
+```
+
 ### インサイトの保存と呼び出し
 
 ```python
-# 重要な決定事項を保存
-rlm_remember("バックエンドがすべてのデータの信頼できる唯一の情報源",
-             category="decision", importance="high",
-             tags="architecture,backend")
+# ユニバーサルルールを保存（毎セッション読み込み）
+rlm_remember("必ずLOCAL→VPSの順でデプロイ、直接デプロイ禁止",
+             category="decision", importance="critical",
+             tags="deploy,workflow")
 
-# 後で検索
+# トピック固有のインサイトを保存
+rlm_remember("WeasyPrintのPDFレンダリングにはインラインCSSが必要",
+             category="finding", importance="high",
+             tags="weasyprint,pdf")
+
+# インサイトを検索
 rlm_recall(query="信頼できる情報源")
 rlm_recall(category="decision")
+rlm_recall(importance="critical")    # 全ユニバーサルルール
 ```
+
+### 重要度レベル
+
+| レベル | 使用場面 | 読み込みタイミング |
+|--------|---------|-------------------|
+| `critical` | ユニバーサルルール（トピックに関係なく適用） | 毎セッション |
+| `high` | トピック固有のルール | そのトピック作業時 |
+| `medium` | 有用だがブロッキングではない情報 | 明示的な検索時 |
+
+**判定テスト**：「全く別のトピックで作業していても、このルールは適用されるか？」 → はい なら `critical`。
 
 ### 会話履歴の管理
 
