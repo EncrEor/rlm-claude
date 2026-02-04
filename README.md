@@ -113,7 +113,7 @@ RLM hooks into Claude Code's `/compact` event. Before your context is wiped, RLM
 - **`rlm_status`** - System overview (insight count, chunk stats, access metrics)
 
 ### Conversation History
-- **`rlm_chunk`** - Save conversation segments to persistent storage
+- **`rlm_chunk`** - Save conversation segments with typed categorization (`snapshot`, `session`, `debug`; `insight` redirects to `rlm_remember`)
 - **`rlm_peek`** - Read a chunk (full or partial by line range)
 - **`rlm_grep`** - Regex search across all chunks (+ fuzzy matching for typo tolerance)
 - **`rlm_search`** - Hybrid search: BM25 + semantic cosine similarity (FR/EN, accent-normalized, chunks + insights)
@@ -217,10 +217,11 @@ rlm_recall(category="decision")
 ### Manage conversation history
 
 ```python
-# Save important discussion
+# Save important discussion (typed)
 rlm_chunk("Discussion about API redesign... [long content]",
           summary="API v2 architecture decisions",
-          tags="api,architecture")
+          tags="api,architecture",
+          chunk_type="session")        # or "snapshot", "debug"
 
 # Search across all history
 rlm_search("API architecture decisions")      # BM25 ranked
@@ -400,6 +401,7 @@ ls ~/.claude/rlm/hooks/                                  # Check installed hooks
 - [x] **Phase 6**: Production-ready (tests, CI/CD, PyPI)
 - [x] **Phase 7**: MAGMA-inspired (temporal filtering, entity extraction)
 - [x] **Phase 8**: Hybrid semantic search (BM25 + cosine, Model2Vec)
+- [x] **Phase 9**: Typed chunking — `chunk_type` parameter (snapshot/session/debug/insight redirect)
 
 ---
 

@@ -114,7 +114,7 @@ RLM s'accroche à l'événement `/compact` de Claude Code. Avant que votre conte
 - **`rlm_status`** - Vue d'ensemble du système (nombre d'insights, stats chunks, métriques d'accès)
 
 ### Historique de conversation
-- **`rlm_chunk`** - Sauvegarder des segments de conversation en stockage persistant
+- **`rlm_chunk`** - Sauvegarder des segments de conversation avec catégorisation typée (`snapshot`, `session`, `debug` ; `insight` redirige vers `rlm_remember`)
 - **`rlm_peek`** - Lire un chunk (entier ou partiel par plage de lignes)
 - **`rlm_grep`** - Recherche regex dans tous les chunks (+ recherche floue pour tolérance aux typos)
 - **`rlm_search`** - Recherche hybride : BM25 + similarité cosinus sémantique (FR/EN, accents normalisés, chunks + insights)
@@ -218,10 +218,11 @@ rlm_recall(category="decision")
 ### Gérer l'historique de conversation
 
 ```python
-# Sauvegarder une discussion importante
+# Sauvegarder une discussion importante (typée)
 rlm_chunk("Discussion sur le redesign de l'API... [contenu long]",
           summary="Décisions architecture API v2",
-          tags="api,architecture")
+          tags="api,architecture",
+          chunk_type="session")        # ou "snapshot", "debug"
 
 # Chercher dans tout l'historique
 rlm_search("décisions architecture API")      # Classement BM25 + sémantique
@@ -401,6 +402,7 @@ ls ~/.claude/rlm/hooks/                                  # Vérifier les hooks i
 - [x] **Phase 6** : Production-ready (tests, CI/CD, PyPI)
 - [x] **Phase 7** : Inspiré MAGMA (filtrage temporel, extraction d'entités)
 - [x] **Phase 8** : Recherche sémantique hybride (BM25 + cosinus, Model2Vec)
+- [x] **Phase 9** : Chunking typé — paramètre `chunk_type` (snapshot/session/debug/redirection insight)
 
 Voir [ROADMAP.md](ROADMAP.md) pour les détails.
 

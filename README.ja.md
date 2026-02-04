@@ -113,7 +113,7 @@ RLMはClaude Codeの `/compact` イベントにフックします。コンテキ
 - **`rlm_status`** - システム概要（インサイト数、チャンク統計、アクセスメトリクス）
 
 ### 会話履歴
-- **`rlm_chunk`** - 会話セグメントを永続ストレージに保存
+- **`rlm_chunk`** - 型付きカテゴリ分類で会話セグメントを保存（`snapshot`、`session`、`debug`；`insight`は`rlm_remember`にリダイレクト）
 - **`rlm_peek`** - チャンクを読み取り（全体または行範囲を指定して部分的に）
 - **`rlm_grep`** - 全チャンクにわたる正規表現検索（＋タイプミス耐性のあいまい検索）
 - **`rlm_search`** - ハイブリッド検索：BM25 + セマンティックコサイン類似度（FR/EN対応、アクセント正規化、チャンク＋インサイト統合）
@@ -217,10 +217,11 @@ rlm_recall(category="decision")
 ### 会話履歴の管理
 
 ```python
-# 重要な議論を保存
+# 重要な議論を保存（型付き）
 rlm_chunk("API再設計についての議論... [長いコンテンツ]",
           summary="API v2アーキテクチャの決定事項",
-          tags="api,architecture")
+          tags="api,architecture",
+          chunk_type="session")        # または "snapshot", "debug"
 
 # 全履歴を横断検索
 rlm_search("APIアーキテクチャの決定事項")      # BM25 + セマンティックランキング
@@ -400,6 +401,7 @@ ls ~/.claude/rlm/hooks/                                  # インストール済
 - [x] **フェーズ6**: プロダクションレディ（テスト、CI/CD、PyPI）
 - [x] **フェーズ7**: MAGMA対応（時間フィルタリング、エンティティ抽出）
 - [x] **フェーズ8**: ハイブリッドセマンティック検索（BM25 + コサイン、Model2Vec）
+- [x] **フェーズ9**: 型付きチャンキング — `chunk_type` パラメータ（snapshot/session/debug/insightリダイレクト）
 
 ---
 
