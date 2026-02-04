@@ -94,7 +94,7 @@ Vos données (`~/.claude/rlm/`) ne sont pas touchées. Seul le chemin du serveur
 
 ### Sauvegarde automatique avant perte de contexte
 
-RLM s'accroche à l'événement `/compact` de Claude Code. Avant que votre contexte ne soit effacé, RLM **sauvegarde automatiquement un snapshot**. Aucune action nécessaire.
+RLM intercepte l'événement `/compact` de Claude Code. Avant que votre contexte ne soit effacé, RLM **sauvegarde automatiquement un snapshot**. Rien à faire.
 
 ### Deux systèmes de mémoire
 
@@ -131,7 +131,7 @@ RLM s'accroche à l'événement `/compact` de Claude Code. Avant que votre conte
 - **`rlm_retention_run`** - Archiver les vieux chunks inutilisés, purger les anciens
 - **`rlm_restore`** - Restaurer des chunks archivés
 - Cycle de vie en 3 zones : **Actif** &rarr; **Archive** (.gz) &rarr; **Purge**
-- Système d'immunité : tags critiques, accès fréquent et mots-clés protègent les chunks
+- Système d'immunité : les tags critiques, l'accès fréquent et certains mots-clés protègent un chunk de l'archivage
 
 ### Auto-Chunking (Hooks)
 - **Hook PreCompact** : Snapshot automatique avant `/compact` ou auto-compact
@@ -157,7 +157,7 @@ RLM s'accroche à l'événement `/compact` de Claude Code. Avant que votre conte
 | **Qualité sémantique** | Bonne (orientée mots-clés) | Meilleure (vrai sémantique) |
 | **Vitesse** | **21x plus rapide** | Référence |
 
-Chevauchement Top-5 entre providers : ~1.6/5 (résultats différents pour 7/8 requêtes). FastEmbed capture mieux le sens sémantique tandis que Model2Vec penche vers la similarité par mots-clés. La fusion hybride BM25 + cosinus compense les faiblesses des deux.
+Chevauchement Top-5 entre providers : ~1.6/5 (résultats différents pour 7/8 requêtes). FastEmbed capture mieux le sens sémantique, Model2Vec penche vers la similarité par mots-clés. La fusion BM25 + cosinus compense les faiblesses des deux.
 
 **Recommandation** : Commencez avec Model2Vec (défaut). Passez à FastEmbed uniquement si vous avez besoin d'une meilleure précision sémantique et pouvez accepter un démarrage plus lent.
 
