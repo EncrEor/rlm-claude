@@ -1,0 +1,16 @@
+context/
+.git/
+__pycache__/
+*.pyc
+*.pyo
+tests/
+docs/
+scripts/
+hooks/
+templates/
+mcp_server/
+*.egg-info/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/

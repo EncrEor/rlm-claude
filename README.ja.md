@@ -38,13 +38,21 @@ Claude Codeには**コンテキストウィンドウの制限**があります�
 
 ## クイックインストール
 
+> **必要環境**: Python 3.10+（[ダウンロード](https://www.python.org/downloads/)）、Claude Code CLI
+
 ### PyPI経由（推奨）
 
 ```bash
 pip install mcp-rlm-server[all]
 ```
 
-### Git経由
+### uv経由（高速、グローバル環境を汚染しない）
+
+```bash
+uv tool install mcp-rlm-server[all] --python 3.12
+```
+
+### Git経由（フック付き完全インストール）
 
 ```bash
 git clone https://github.com/EncrEor/rlm-claude.git
@@ -52,9 +60,17 @@ cd rlm-claude
 ./install.sh
 ```
 
-Claude Codeを再起動すれば完了です。
+### Docker経由
 
-**必要環境**: Python 3.10+、Claude Code CLI
+```bash
+docker build -t rlm-server .
+# またはレジストリから取得（公開後）：
+# docker pull ghcr.io/encreor/rlm-claude
+```
+
+その後、DockerコンテナでClaude Codeを設定してください（下記の[Dockerセットアップ](#dockerセットアップ)を参照）。
+
+Claude Codeを再起動すれば完了です。
 
 ### v0.9.0以前からのアップグレード
 
@@ -291,6 +307,7 @@ rlm-claude/
 │       └── fileutil.py        # 安全なI/O（アトミック書き込み、パス検証、ロック）
 │
 ├── hooks/                     # Claude Codeフック
+│   ├── i18n.py                # フックメッセージの翻訳（EN/FR）
 │   ├── pre_compact_chunk.py   # /compact前の自動保存（PreCompactフック）
 │   └── reset_chunk_counter.py # チャンク後の統計リセット（PostToolUseフック）
 │
@@ -340,6 +357,31 @@ rlm-claude/
 }
 ```
 
+### 言語
+
+フックメッセージはデフォルトで英語です。フランス語にするには `RLM_LANG=fr` を設定：
+
+```bash
+# オプション1：シェルプロファイルでグローバルに設定（~/.zshrc、~/.bashrc）
+export RLM_LANG=fr
+
+# オプション2：~/.claude/settings.jsonでフックごとに設定
+# コマンドを以下に置き換え：
+"command": "RLM_LANG=fr python3 ~/.claude/rlm/hooks/pre_compact_chunk.py"
+```
+
+対応言語：`en`（デフォルト）、`fr`。
+
+### ストレージディレクトリ
+
+RLMはデフォルトで `~/.claude/rlm/context/` にデータを保存します。`RLM_CONTEXT_DIR` でオーバーライド可能：
+
+```bash
+export RLM_CONTEXT_DIR=/path/to/custom/storage
+```
+
+Dockerデプロイメントで特に有用です（下記参照）。
+
 ### カスタムドメイン
 
 カスタムドメインでチャンクをトピックごとに整理：
@@ -361,20 +403,77 @@ rlm-claude/
 
 ## 手動インストール
 
-手動でインストールする場合：
+### pip経由
 
 ```bash
 pip install -e ".[all]"
 claude mcp add rlm-server -- python3 -m mcp_server
-mkdir -p ~/.claude/rlm/hooks
-cp hooks/*.py ~/.claude/rlm/hooks/
-chmod +x ~/.claude/rlm/hooks/*.py
-mkdir -p ~/.claude/skills/rlm-analyze ~/.claude/skills/rlm-parallel
-cp templates/skills/rlm-analyze/skill.md ~/.claude/skills/rlm-analyze/
-cp templates/skills/rlm-parallel/skill.md ~/.claude/skills/rlm-parallel/
 ```
 
-その後、`~/.claude/settings.json` でフックを設定してください（上記参照）。
+### uv経由
+
+```bash
+uv tool install mcp-rlm-server[all] --python 3.12
+claude mcp add rlm-server -- ~/.local/bin/mcp-rlm-server
+```
+
+### フックセットアップ（pipとuvインストールに必要）
+
+`./install.sh` スクリプトがこれを自動的に処理します。手動インストールの場合：
+
+```bash
+# リポジトリからフックスクリプトを取得
+git clone https://github.com/EncrEor/rlm-claude.git /tmp/rlm-setup
+
+# フックとi18nをインストール
+mkdir -p ~/.claude/rlm/hooks
+cp /tmp/rlm-setup/hooks/pre_compact_chunk.py ~/.claude/rlm/hooks/
+cp /tmp/rlm-setup/hooks/reset_chunk_counter.py ~/.claude/rlm/hooks/
+cp /tmp/rlm-setup/hooks/i18n.py ~/.claude/rlm/hooks/
+chmod +x ~/.claude/rlm/hooks/*.py
+
+# スキルをインストール（オプション）
+mkdir -p ~/.claude/skills/rlm-analyze ~/.claude/skills/rlm-parallel
+cp /tmp/rlm-setup/templates/skills/rlm-analyze/skill.md ~/.claude/skills/rlm-analyze/
+cp /tmp/rlm-setup/templates/skills/rlm-parallel/skill.md ~/.claude/skills/rlm-parallel/
+
+# クリーンアップ
+rm -rf /tmp/rlm-setup
+```
+
+その後、`~/.claude/settings.json` でフックを設定してください（[フック設定](#フック設定)を参照）。
+
+### Dockerセットアップ
+
+イメージをビルド：
+
+```bash
+git clone https://github.com/EncrEor/rlm-claude.git
+cd rlm-claude
+docker build -t rlm-server .
+```
+
+Claude Code MCPをDockerで設定：
+
+```bash
+claude mcp add rlm-server -- docker run -i --rm -v ~/.claude/rlm/context:/data rlm-server
+```
+
+または `~/.claude/settings.json` で手動設定：
+
+```json
+{
+  "mcpServers": {
+    "rlm-server": {
+      "type": "stdio",
+      "command": "docker",
+      "args": ["run", "-i", "--rm", "-v", "~/.claude/rlm/context:/data", "rlm-server"]
+    }
+  }
+}
+```
+
+Dockerイメージは内部で `RLM_CONTEXT_DIR=/data` を使用し、ボリュームマウントがローカルストレージにマッピングされます。
 
 ## アンインストール
 

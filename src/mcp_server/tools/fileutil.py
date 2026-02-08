@@ -10,6 +10,7 @@ Provides:
 
 import fcntl
 import json
+import os
 import re
 import tempfile
 from contextlib import contextmanager
@@ -24,10 +25,18 @@ def resolve_context_dir() -> Path:
     """Resolve the context directory for RLM storage.
 
     Strategy (first match wins):
+    0. RLM_CONTEXT_DIR env var (explicit override, useful for Docker)
     1. ~/.claude/rlm/context/ if it has data (chunks/ non-empty or index.json exists with chunks)
     2. Project root context/ (git clone layout: walk up from this file to find context/)
     3. ~/.claude/rlm/context/ as fallback (fresh install)
     """
+    # Option 0: Explicit override via environment variable
+    env_dir = os.environ.get("RLM_CONTEXT_DIR")
+    if env_dir:
+        p = Path(env_dir)
+        p.mkdir(parents=True, exist_ok=True)
+        return p
+
     # Option 1: User-level storage with existing data
     user_dir = Path.home() / ".claude" / "rlm" / "context"
     if user_dir.exists():

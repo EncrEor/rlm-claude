@@ -38,13 +38,21 @@ Vous : "Qu'est-ce qu'on avait décidé pour l'architecture API ?"
 
 ## Installation rapide
 
+> **Prérequis** : Python 3.10+ ([télécharger](https://www.python.org/downloads/)), Claude Code CLI
+
 ### Via PyPI (recommandé)
 
 ```bash
 pip install mcp-rlm-server[all]
 ```
 
-### Via Git
+### Via uv (rapide, sans pollution globale)
+
+```bash
+uv tool install mcp-rlm-server[all] --python 3.12
+```
+
+### Via Git (installation complète avec hooks)
 
 ```bash
 git clone https://github.com/EncrEor/rlm-claude.git
@@ -52,9 +60,17 @@ cd rlm-claude
 ./install.sh
 ```
 
-Relancez Claude Code. C'est prêt.
+### Via Docker
 
-**Prérequis** : Python 3.10+, Claude Code CLI
+```bash
+docker build -t rlm-server .
+# Ou depuis le registre (quand publié) :
+# docker pull ghcr.io/encreor/rlm-claude
+```
+
+Puis configurez Claude Code pour utiliser le conteneur Docker (voir [Configuration Docker](#configuration-docker) ci-dessous).
+
+Relancez Claude Code. C'est prêt.
 
 ### Mise à jour depuis v0.9.0 ou antérieur
 
@@ -292,6 +308,7 @@ rlm-claude/
 │       └── fileutil.py        # I/O sécurisé (écritures atomiques, validation chemins, verrous)
 │
 ├── hooks/                     # Hooks Claude Code
+│   ├── i18n.py                # Traductions (EN/FR) pour les messages des hooks
 │   ├── pre_compact_chunk.py   # Auto-save avant /compact (hook PreCompact)
 │   └── reset_chunk_counter.py # Reset stats après chunk (hook PostToolUse)
 │
@@ -341,6 +358,31 @@ L'installeur configure automatiquement les hooks dans `~/.claude/settings.json` 
 }
 ```
 
+### Langue
+
+Les messages des hooks sont en anglais par défaut. Utilisez `RLM_LANG=fr` pour le français :
+
+```bash
+# Option 1 : Définir globalement dans votre profil shell (~/.zshrc, ~/.bashrc)
+export RLM_LANG=fr
+
+# Option 2 : Définir par hook dans ~/.claude/settings.json
+# Remplacer la commande par :
+"command": "RLM_LANG=fr python3 ~/.claude/rlm/hooks/pre_compact_chunk.py"
+```
+
+Langues supportées : `en` (défaut), `fr`.
+
+### Répertoire de stockage
+
+RLM stocke les données dans `~/.claude/rlm/context/` par défaut. Remplacer avec `RLM_CONTEXT_DIR` :
+
+```bash
+export RLM_CONTEXT_DIR=/chemin/vers/stockage/custom
+```
+
+Particulièrement utile pour les déploiements Docker (voir ci-dessous).
+
 ### Domaines personnalisés
 
 Organisez vos chunks par sujet avec des domaines personnalisés :
@@ -362,20 +404,77 @@ Organisez vos chunks par sujet avec des domaines personnalisés :
 
 ## Installation manuelle
 
-Si vous préférez installer manuellement :
+### Via pip
 
 ```bash
 pip install -e ".[all]"
 claude mcp add rlm-server -- python3 -m mcp_server
-mkdir -p ~/.claude/rlm/hooks
-cp hooks/*.py ~/.claude/rlm/hooks/
-chmod +x ~/.claude/rlm/hooks/*.py
-mkdir -p ~/.claude/skills/rlm-analyze ~/.claude/skills/rlm-parallel
-cp templates/skills/rlm-analyze/skill.md ~/.claude/skills/rlm-analyze/
-cp templates/skills/rlm-parallel/skill.md ~/.claude/skills/rlm-parallel/
 ```
 
-Puis configurez les hooks dans `~/.claude/settings.json` (voir ci-dessus).
+### Via uv
+
+```bash
+uv tool install mcp-rlm-server[all] --python 3.12
+claude mcp add rlm-server -- ~/.local/bin/mcp-rlm-server
+```
+
+### Configuration des hooks (requis pour pip et uv)
+
+Le script `./install.sh` gère cela automatiquement. Pour les installations manuelles :
+
+```bash
+# Récupérer les scripts de hooks depuis le repo
+git clone https://github.com/EncrEor/rlm-claude.git /tmp/rlm-setup
+
+# Installer les hooks et i18n
+mkdir -p ~/.claude/rlm/hooks
+cp /tmp/rlm-setup/hooks/pre_compact_chunk.py ~/.claude/rlm/hooks/
+cp /tmp/rlm-setup/hooks/reset_chunk_counter.py ~/.claude/rlm/hooks/
+cp /tmp/rlm-setup/hooks/i18n.py ~/.claude/rlm/hooks/
+chmod +x ~/.claude/rlm/hooks/*.py
+
+# Installer les skills (optionnel)
+mkdir -p ~/.claude/skills/rlm-analyze ~/.claude/skills/rlm-parallel
+cp /tmp/rlm-setup/templates/skills/rlm-analyze/skill.md ~/.claude/skills/rlm-analyze/
+cp /tmp/rlm-setup/templates/skills/rlm-parallel/skill.md ~/.claude/skills/rlm-parallel/
+
+# Nettoyage
+rm -rf /tmp/rlm-setup
+```
+
+Puis configurez les hooks dans `~/.claude/settings.json` (voir [Configuration des hooks](#configuration-des-hooks) ci-dessus).
+
+### Configuration Docker
+
+Construire l'image :
+
+```bash
+git clone https://github.com/EncrEor/rlm-claude.git
+cd rlm-claude
+docker build -t rlm-server .
+```
+
+Configurer Claude Code MCP pour utiliser Docker :
+
+```bash
+claude mcp add rlm-server -- docker run -i --rm -v ~/.claude/rlm/context:/data rlm-server
+```
+
+Ou manuellement dans `~/.claude/settings.json` :
+
+```json
+{
+  "mcpServers": {
+    "rlm-server": {
+      "type": "stdio",
+      "command": "docker",
+      "args": ["run", "-i", "--rm", "-v", "~/.claude/rlm/context:/data", "rlm-server"]
+    }
+  }
+}
+```
+
+L'image Docker utilise `RLM_CONTEXT_DIR=/data` en interne, et le montage de volume le mappe vers votre stockage local.
 
 ## Désinstallation
 

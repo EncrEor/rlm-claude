@@ -1,7 +1,7 @@
 #!/bin/bash
 # =============================================================================
 # RLM Installation Script
-# Memoire infinie pour Claude Code
+# Infinite memory for Claude Code
 # =============================================================================
 #
 # Usage:
@@ -15,8 +15,33 @@ set -e
 
 echo ""
 echo "=============================================="
-echo "  RLM - Memoire infinie pour Claude Code"
+echo "  RLM - Infinite Memory for Claude Code"
 echo "=============================================="
+echo ""
+
+# =============================================================================
+# Check Python version (3.10+ required)
+# =============================================================================
+PYTHON_VERSION=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")' 2>/dev/null)
+if [ -z "$PYTHON_VERSION" ]; then
+    echo "ERROR: python3 not found."
+    echo "  Install Python 3.10+ via one of:"
+    echo "    brew install python@3.12"
+    echo "    uv python install 3.12"
+    echo "    https://www.python.org/downloads/"
+    exit 1
+fi
+PY_MAJOR=$(echo "$PYTHON_VERSION" | cut -d. -f1)
+PY_MINOR=$(echo "$PYTHON_VERSION" | cut -d. -f2)
+if [ "$PY_MAJOR" -lt 3 ] || ([ "$PY_MAJOR" -eq 3 ] && [ "$PY_MINOR" -lt 10 ]); then
+    echo "ERROR: Python $PYTHON_VERSION found but RLM requires 3.10+."
+    echo "  Install a newer version via one of:"
+    echo "    brew install python@3.12"
+    echo "    uv python install 3.12"
+    echo "    https://www.python.org/downloads/"
+    exit 1
+fi
+echo "  Python $PYTHON_VERSION OK"
 echo ""
 
 # =============================================================================
@@ -36,7 +61,7 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         *)
-            echo "Option inconnue: $1"
+            echo "Unknown option: $1"
             echo "Usage: ./install.sh [--claude-md PATH] [--no-claude-md]"
             exit 1
             ;;
@@ -98,34 +123,35 @@ find_claude_md() {
 # =============================================================================
 # 1. Create directories
 # =============================================================================
-echo "[1/7] Creation des repertoires..."
+echo "[1/7] Creating directories..."
 mkdir -p "$RLM_DIR/hooks"
 mkdir -p "$RLM_DIR/context/chunks"
 mkdir -p "$SKILLS_DIR/rlm-analyze"
 mkdir -p "$SKILLS_DIR/rlm-parallel"
-echo "  OK - Repertoires crees"
+echo "  OK - Directories created"
 
 # =============================================================================
 # 2. Copy hook scripts
 # =============================================================================
-echo "[2/7] Installation des hooks..."
+echo "[2/7] Installing hooks..."
 cp "$SCRIPT_DIR/hooks/pre_compact_chunk.py" "$RLM_DIR/hooks/"
 cp "$SCRIPT_DIR/hooks/reset_chunk_counter.py" "$RLM_DIR/hooks/"
+cp "$SCRIPT_DIR/hooks/i18n.py" "$RLM_DIR/hooks/"
 chmod +x "$RLM_DIR/hooks/"*.py
-echo "  OK - Hooks installes"
+echo "  OK - Hooks installed"
 
 # =============================================================================
 # 3. Copy skill
 # =============================================================================
-echo "[3/7] Installation des skills RLM..."
+echo "[3/7] Installing RLM skills..."
 cp "$SCRIPT_DIR/templates/skills/rlm-analyze/skill.md" "$SKILLS_DIR/rlm-analyze/"
 cp "$SCRIPT_DIR/templates/skills/rlm-parallel/skill.md" "$SKILLS_DIR/rlm-parallel/"
-echo "  OK - Skills /rlm-analyze et /rlm-parallel installes"
+echo "  OK - Skills /rlm-analyze and /rlm-parallel installed"
 
 # =============================================================================
 # 4. Configure MCP server
 # =============================================================================
-echo "[4/7] Configuration du serveur MCP..."
+echo "[4/7] Configuring MCP server..."
 if command -v claude &> /dev/null; then
     # Remove existing if any
     claude mcp remove rlm-server 2>/dev/null || true
@@ -136,15 +162,15 @@ if command -v claude &> /dev/null; then
         MCP_CMD="python3 $SCRIPT_DIR/src/mcp_server/server.py"
     fi
     claude mcp add rlm-server -s user -- $MCP_CMD
-    echo "  OK - Serveur MCP configure ($MCP_CMD)"
+    echo "  OK - MCP server configured ($MCP_CMD)"
 else
-    echo "  SKIP - Claude CLI non trouve (configurer manuellement)"
+    echo "  SKIP - Claude CLI not found (configure manually)"
 fi
 
 # =============================================================================
 # 5. Initialize context files
 # =============================================================================
-echo "[5/7] Initialisation du contexte..."
+echo "[5/7] Initializing context..."
 if [ ! -f "$RLM_DIR/context/session_memory.json" ]; then
     cat > "$RLM_DIR/context/session_memory.json" << 'EOF'
 {
@@ -172,12 +198,12 @@ cat > "$RLM_DIR/chunk_state.json" << 'EOF'
   "last_chunk": 0
 }
 EOF
-echo "  OK - Contexte initialise"
+echo "  OK - Context initialized"
 
 # =============================================================================
 # 6. Merge hooks into settings.json
 # =============================================================================
-echo "[6/7] Configuration des hooks dans settings.json..."
+echo "[6/7] Configuring hooks in settings.json..."
 
 python3 << 'PYTHON_SCRIPT'
 import json
@@ -265,13 +291,13 @@ settings_file.parent.mkdir(parents=True, exist_ok=True)
 with open(settings_file, "w") as f:
     json.dump(settings, f, indent=2)
 
-print("  OK - Hooks merges dans settings.json")
+print("  OK - Hooks merged into settings.json")
 PYTHON_SCRIPT
 
 # =============================================================================
 # 7. Add RLM instructions to CLAUDE.md
 # =============================================================================
-echo "[7/7] Configuration CLAUDE.md..."
+echo "[7/7] Configuring CLAUDE.md..."
 
 if [ "$SKIP_CLAUDE_MD" = true ]; then
     echo "  SKIP - Option --no-claude-md"
@@ -282,22 +308,22 @@ else
 
         if [ -z "$FOUND" ]; then
             echo ""
-            echo "  CLAUDE.md non trouve automatiquement."
-            echo "  Emplacements verifies:"
+            echo "  CLAUDE.md not found automatically."
+            echo "  Checked locations:"
             echo "    - $SCRIPT_DIR/../CLAUDE.md"
             echo "    - $HOME/.claude/CLAUDE.md"
             echo "    - $(pwd)/CLAUDE.md"
             echo ""
-            read -p "  Entrez le chemin vers CLAUDE.md (ou 'skip' pour ignorer): " CLAUDE_MD_PATH
+            read -p "  Enter path to CLAUDE.md (or 'skip' to ignore): " CLAUDE_MD_PATH
             if [ "$CLAUDE_MD_PATH" = "skip" ] || [ -z "$CLAUDE_MD_PATH" ]; then
-                echo "  SKIP - CLAUDE.md ignore"
+                echo "  SKIP - CLAUDE.md ignored"
                 CLAUDE_MD_PATH=""
             fi
         elif [[ "$FOUND" == MULTIPLE:* ]]; then
             # Multiple files found
             FILES="${FOUND#MULTIPLE:}"
             echo ""
-            echo "  Plusieurs CLAUDE.md trouves:"
+            echo "  Multiple CLAUDE.md files found:"
             IFS=' ' read -ra FILE_ARRAY <<< "$FILES"
             i=1
             for f in "${FILE_ARRAY[@]}"; do
@@ -305,9 +331,9 @@ else
                 ((i++))
             done
             echo ""
-            read -p "  Choisissez un numero (ou 'skip' pour ignorer): " CHOICE
+            read -p "  Choose a number (or 'skip' to ignore): " CHOICE
             if [ "$CHOICE" = "skip" ] || [ -z "$CHOICE" ]; then
-                echo "  SKIP - CLAUDE.md ignore"
+                echo "  SKIP - CLAUDE.md ignored"
                 CLAUDE_MD_PATH=""
             else
                 # Get the chosen file
@@ -317,7 +343,7 @@ else
         else
             # Single file found
             CLAUDE_MD_PATH="$FOUND"
-            echo "  Trouve: $CLAUDE_MD_PATH"
+            echo "  Found: $CLAUDE_MD_PATH"
         fi
     fi
 
@@ -330,13 +356,13 @@ else
             # Append
             echo "" >> "$CLAUDE_MD_PATH"
             cat "$SCRIPT_DIR/templates/CLAUDE_RLM_SNIPPET.md" >> "$CLAUDE_MD_PATH"
-            echo "  OK - Instructions RLM ajoutees a $CLAUDE_MD_PATH"
-            echo "  (Backup cree: $CLAUDE_MD_PATH.backup.*)"
+            echo "  OK - RLM instructions added to $CLAUDE_MD_PATH"
+            echo "  (Backup created: $CLAUDE_MD_PATH.backup.*)"
         else
-            echo "  OK - Instructions RLM deja presentes dans $CLAUDE_MD_PATH"
+            echo "  OK - RLM instructions already present in $CLAUDE_MD_PATH"
         fi
     elif [ -n "$CLAUDE_MD_PATH" ]; then
-        echo "  ERREUR - Fichier non trouve: $CLAUDE_MD_PATH"
+        echo "  ERROR - File not found: $CLAUDE_MD_PATH"
     fi
 fi
 
@@ -345,24 +371,27 @@ fi
 # =============================================================================
 echo ""
 echo "=============================================="
-echo "  Installation terminee avec succes!"
+echo "  Installation completed successfully!"
 echo "=============================================="
 echo ""
-echo "RLM est maintenant installe avec :"
-echo "  - 14 tools MCP disponibles"
-echo "  - Auto-save avant /compact (hook PreCompact)"
-echo "  - Skills /rlm-analyze et /rlm-parallel installes"
+echo "RLM is now installed with:"
+echo "  - 14 MCP tools available"
+echo "  - Auto-save before /compact (PreCompact hook)"
+echo "  - Skills /rlm-analyze and /rlm-parallel installed"
 echo ""
-echo "PROCHAINE ETAPE:"
-echo "  Relancez Claude Code pour activer RLM"
+echo "NEXT STEP:"
+echo "  Restart Claude Code to activate RLM"
 echo ""
-echo "VERIFICATION:"
-echo "  claude mcp list    # Voir les serveurs MCP"
-echo "  rlm_status()       # Tester dans Claude Code"
+echo "VERIFY:"
+echo "  claude mcp list    # List MCP servers"
+echo "  rlm_status()       # Test inside Claude Code"
 echo ""
-echo "PERSONNALISATION (optionnel):"
-echo "  Pour personnaliser les domaines suggeres:"
-echo "  Editez $SCRIPT_DIR/context/domains.json"
-echo "  (voir domains.json.example pour un exemple complet)"
+echo "LANGUAGE:"
+echo "  Hook messages are in English by default."
+echo "  Set RLM_LANG=fr for French (see README)."
+echo ""
+echo "CUSTOMIZATION (optional):"
+echo "  Edit $SCRIPT_DIR/context/domains.json"
+echo "  (see domains.json.example for a complete example)"
 echo ""
 echo "=============================================="

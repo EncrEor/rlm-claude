@@ -7,9 +7,16 @@ Injects a blocking message requiring Claude to chunk the session
 before the context is compacted and potentially lost.
 
 Part of RLM Phase 3 - Context preservation.
+
+Language: Set RLM_LANG=fr for French (default: English).
 """
 import json
 import sys
+from pathlib import Path
+
+# Import i18n from same directory
+sys.path.insert(0, str(Path(__file__).parent))
+from i18n import t
 
 
 def get_context_percentage() -> int:
@@ -43,20 +50,9 @@ def main():
     ctx_info = f" (ctx: {ctx_pct}%)" if ctx_pct > 0 else ""
 
     message = (
-        f"[🔄 COMPACT DÉTECTÉ - SAUVEGARDE OBLIGATOIRE]{ctx_info}\n"
+        f"[🔄 {t('compact_title')}]{ctx_info}\n"
         f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"Le contexte va être compacté. AVANT de continuer:\n\n"
-        f"1. **rlm_chunk()** - Résumer les points clés de cette session:\n"
-        f"   - Décisions prises\n"
-        f"   - Problèmes résolus\n"
-        f"   - État actuel du travail en cours\n"
-        f"   - Prochaines étapes identifiées\n\n"
-        f"2. **rlm_remember()** - Sauvegarder chaque:\n"
-        f"   - Règle/convention découverte\n"
-        f"   - Bug fix important\n"
-        f"   - Décision technique\n\n"
-        f"⚠️ Ce qui n'est pas chunké sera PERDU après le compact.\n"
-        f"Chunk maintenant, puis le compact continuera."
+        f"{t('compact_body')}"
     )
 
     result = {"systemMessage": message}

@@ -7,16 +7,22 @@ Triggers reminders based on:
 2. Context usage (only if >= 55% filled)
 
 Progressive severity:
-- 10-19 turns + ctx>=55%: Gentle reminder (📝)
-- 20-29 turns + ctx>=55%: Insistent reminder (⚠️)
-- 30+ turns + ctx>=55%: Critical (🛑)
+- 10-19 turns + ctx>=55%: Gentle reminder
+- 20-29 turns + ctx>=55%: Insistent reminder
+- 30+ turns + ctx>=55%: Critical
 
 Part of RLM Phase 3 - 100% automatic memory management.
+
+Language: Set RLM_LANG=fr for French (default: English).
 """
 import json
 import sys
 import time
 from pathlib import Path
+
+# Import i18n from same directory
+sys.path.insert(0, str(Path(__file__).parent))
+from i18n import t
 
 # Configuration - Progressive thresholds
 STATE_FILE = Path.home() / ".claude/rlm/chunk_state.json"
@@ -97,32 +103,27 @@ def format_message(severity: str, turns: int, minutes: int, ctx_pct: int) -> str
     """Format the reminder message based on severity."""
 
     ctx_info = f" | ctx: {ctx_pct}%" if ctx_pct > 0 else ""
+    turns_label = t("turns")
 
     if severity == "critical":
         return (
-            f"[🛑 MÉMOIRE CRITIQUE - ACTION REQUISE]\n"
+            f"[🛑 {t('critical_title')}]\n"
             f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-            f"{turns} tours | {minutes} min{ctx_info}\n\n"
-            f"AVANT de répondre à l'utilisateur, tu DOIS:\n"
-            f"1. Appeler rlm_chunk() avec un résumé de la session\n"
-            f"2. Appeler rlm_remember() pour chaque décision clé\n\n"
-            f"C'est NON-NÉGOCIABLE. Chunk d'abord, réponds ensuite."
+            f"{turns} {turns_label} | {minutes} min{ctx_info}\n\n"
+            f"{t('critical_body')}"
         )
 
     if severity == "medium":
         return (
-            f"[⚠️ MÉMOIRE - Sauvegarde recommandée]\n"
-            f"{turns} tours | {minutes} min{ctx_info}\n\n"
-            f"Si contenu important dans cette session:\n"
-            f"→ rlm_chunk() pour sauvegarder le contexte\n"
-            f"→ rlm_remember() pour les décisions clés\n\n"
-            f"Tu peux répondre ET chunker dans le même message."
+            f"[⚠️ {t('medium_title')}]\n"
+            f"{turns} {turns_label} | {minutes} min{ctx_info}\n\n"
+            f"{t('medium_body')}"
         )
 
     # soft
     return (
-        f"[📝 Mémoire] {turns} tours{ctx_info}. "
-        f"Pense à sauvegarder si contenu important."
+        f"[📝 {t('soft_prefix')}] {turns} {turns_label}{ctx_info}. "
+        f"{t('soft_body')}"
     )
 
 
