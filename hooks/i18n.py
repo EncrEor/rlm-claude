@@ -28,27 +28,6 @@ MESSAGES = {
             "What isn't chunked will be LOST after compact.\n"
             "Chunk now, then compact will continue."
         ),
-        # auto_chunk_check.py - critical
-        "critical_title": "CRITICAL MEMORY - ACTION REQUIRED",
-        "critical_body": (
-            "BEFORE responding to the user, you MUST:\n"
-            "1. Call rlm_chunk() with a session summary\n"
-            "2. Call rlm_remember() for each key decision\n\n"
-            "This is NON-NEGOTIABLE. Chunk first, respond after."
-        ),
-        # auto_chunk_check.py - medium
-        "medium_title": "MEMORY - Save recommended",
-        "medium_body": (
-            "If there's important content in this session:\n"
-            "→ rlm_chunk() to save context\n"
-            "→ rlm_remember() for key decisions\n\n"
-            "You can respond AND chunk in the same message."
-        ),
-        # auto_chunk_check.py - soft
-        "soft_prefix": "Memory",
-        "soft_body": "Consider saving if there's important content.",
-        # shared
-        "turns": "turns",
     },
     "fr": {
         # pre_compact_chunk.py
@@ -67,27 +46,6 @@ MESSAGES = {
             "⚠️ Ce qui n'est pas chunké sera PERDU après le compact.\n"
             "Chunk maintenant, puis le compact continuera."
         ),
-        # auto_chunk_check.py - critical
-        "critical_title": "MÉMOIRE CRITIQUE - ACTION REQUISE",
-        "critical_body": (
-            "AVANT de répondre à l'utilisateur, tu DOIS:\n"
-            "1. Appeler rlm_chunk() avec un résumé de la session\n"
-            "2. Appeler rlm_remember() pour chaque décision clé\n\n"
-            "C'est NON-NÉGOCIABLE. Chunk d'abord, réponds ensuite."
-        ),
-        # auto_chunk_check.py - medium
-        "medium_title": "MÉMOIRE - Sauvegarde recommandée",
-        "medium_body": (
-            "Si contenu important dans cette session:\n"
-            "→ rlm_chunk() pour sauvegarder le contexte\n"
-            "→ rlm_remember() pour les décisions clés\n\n"
-            "Tu peux répondre ET chunker dans le même message."
-        ),
-        # auto_chunk_check.py - soft
-        "soft_prefix": "Mémoire",
-        "soft_body": "Pense à sauvegarder si contenu important.",
-        # shared
-        "turns": "tours",
     },
 }
 
