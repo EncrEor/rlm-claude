@@ -148,9 +148,10 @@ RLM hooks into Claude Code's `/compact` event. Before your context is wiped, RLM
 - 3-zone lifecycle: **Active** &rarr; **Archive** (.gz) &rarr; **Purge**
 - Immunity system: critical tags, frequent access, and keywords protect chunks
 
-### Auto-Chunking (Hooks)
+### Auto-Chunking & Memory Routing (Hooks)
 - **PreCompact hook**: Automatic snapshot before `/compact` or auto-compact
-- **PostToolUse hook**: Stats tracking after chunk operations
+- **PostToolUse hook (rlm_chunk)**: Stats tracking after chunk operations
+- **PostToolUse hook (Write/Edit)**: Detects writes to Claude Code's auto-memory and nudges toward RLM for decisions, insights, and session logs
 - User-driven philosophy: you decide when to chunk, the system saves before loss
 
 ### Semantic Search (optional)
@@ -210,7 +211,7 @@ python3 scripts/backfill_embeddings.py
 | Smart retention (archive/purge) | No | Basic | **Yes** |
 | Sub-agent analysis | No | No | **Yes** |
 | Zero config install | N/A | Complex | **3 lines** |
-| FR/EN support | N/A | EN only | **Both** |
+| FR/EN/JA support | N/A | EN only | **3 languages** |
 | Cost | Free | Self-hosted | **Free** |
 
 ---
@@ -307,8 +308,9 @@ rlm-claude/
 │       └── fileutil.py        # Safe I/O (atomic writes, path validation, locking)
 │
 ├── hooks/                     # Claude Code hooks
-│   ├── i18n.py                # Translations (EN/FR) for hook messages
+│   ├── i18n.py                # Translations (EN/FR/JA) for hook messages
 │   ├── pre_compact_chunk.py   # Auto-save before /compact (PreCompact hook)
+│   ├── memory_write_redirect.py # Redirect auto-memory writes to RLM (PostToolUse hook)
 │   └── reset_chunk_counter.py # Stats reset after chunk (PostToolUse hook)
 │
 ├── templates/
@@ -359,18 +361,18 @@ The installer automatically configures hooks in `~/.claude/settings.json`:
 
 ### Language
 
-Hook messages default to English. Set `RLM_LANG=fr` for French:
+Hook messages default to English. Set `RLM_LANG=fr` for French or `RLM_LANG=ja` for Japanese:
 
 ```bash
 # Option 1: Set globally in your shell profile (~/.zshrc, ~/.bashrc)
-export RLM_LANG=fr
+export RLM_LANG=fr   # or ja
 
 # Option 2: Set per-hook in ~/.claude/settings.json
 # Replace the command with:
 "command": "RLM_LANG=fr python3 ~/.claude/rlm/hooks/pre_compact_chunk.py"
 ```
 
-Supported languages: `en` (default), `fr`.
+Supported languages: `en` (default), `fr`, `ja`.
 
 ### Storage Directory
 
@@ -429,6 +431,7 @@ git clone https://github.com/EncrEor/rlm-claude.git /tmp/rlm-setup
 mkdir -p ~/.claude/rlm/hooks
 cp /tmp/rlm-setup/hooks/pre_compact_chunk.py ~/.claude/rlm/hooks/
 cp /tmp/rlm-setup/hooks/reset_chunk_counter.py ~/.claude/rlm/hooks/
+cp /tmp/rlm-setup/hooks/memory_write_redirect.py ~/.claude/rlm/hooks/
 cp /tmp/rlm-setup/hooks/i18n.py ~/.claude/rlm/hooks/
 chmod +x ~/.claude/rlm/hooks/*.py
 
@@ -530,6 +533,7 @@ ls ~/.claude/rlm/hooks/                                  # Check installed hooks
 - [x] **Phase 7**: MAGMA-inspired (temporal filtering, entity extraction)
 - [x] **Phase 8**: Hybrid semantic search (BM25 + cosine, Model2Vec)
 - [x] **Phase 9**: Typed chunking — `chunk_type` parameter (snapshot/session/debug/insight redirect)
+- [ ] **Phase 10**: Auto-memory/RLM cohabitation — Write/Edit hook redirects auto-memory to RLM + Japanese i18n
 
 ---
 
@@ -569,7 +573,7 @@ Code, comments, and commit messages stay in English.
 ## Authors
 
 - Ahmed MAKNI ([@EncrEor](https://github.com/EncrEor))
-- Claude Opus 4.5 (joint R&D)
+- Claude Opus 4.6 (joint R&D)
 
 ## License
 

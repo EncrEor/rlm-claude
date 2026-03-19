@@ -29,6 +29,24 @@
             "command": "python3 ~/.claude/rlm/hooks/reset_chunk_counter.py"
           }
         ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ~/.claude/rlm/hooks/memory_write_redirect.py"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ~/.claude/rlm/hooks/memory_write_redirect.py"
+          }
+        ]
       }
     ]
   }

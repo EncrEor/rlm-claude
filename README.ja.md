@@ -148,9 +148,10 @@ RLMはClaude Codeの `/compact` イベントにフックします。コンテキ
 - 3ゾーンライフサイクル: **アクティブ** &rarr; **アーカイブ** (.gz) &rarr; **パージ**
 - 免除システム: 重要タグ、頻繁なアクセス、キーワードがチャンクを保護
 
-### 自動チャンキング（フック）
+### 自動チャンキング & メモリルーティング（フック）
 - **PreCompactフック**: `/compact` または自動コンパクト前の自動スナップショット
-- **PostToolUseフック**: チャンク操作後の統計追跡
+- **PostToolUseフック (rlm_chunk)**: チャンク操作後の統計追跡
+- **PostToolUseフック (Write/Edit)**: Claude Codeのauto-memoryへの書き込みを検出し、決定事項、インサイト、セッションログはRLMへリダイレクト
 - ユーザー主導の思想: チャンクのタイミングはあなたが決め、システムは消失前に保存
 
 ### セマンティック検索（オプション）
@@ -210,7 +211,7 @@ python3 scripts/backfill_embeddings.py
 | スマートリテンション（アーカイブ/パージ） | なし | 基本的 | **あり** |
 | サブエージェント分析 | なし | なし | **あり** |
 | 設定不要のインストール | N/A | 複雑 | **3行** |
-| FR/EN対応 | N/A | ENのみ | **両方** |
+| FR/EN/JA対応 | N/A | ENのみ | **3言語** |
 | コスト | 無料 | セルフホスト | **無料** |
 
 ---
@@ -307,8 +308,9 @@ rlm-claude/
 │       └── fileutil.py        # 安全なI/O（アトミック書き込み、パス検証、ロック）
 │
 ├── hooks/                     # Claude Codeフック
-│   ├── i18n.py                # フックメッセージの翻訳（EN/FR）
+│   ├── i18n.py                # フックメッセージの翻訳（EN/FR/JA）
 │   ├── pre_compact_chunk.py   # /compact前の自動保存（PreCompactフック）
+│   ├── memory_write_redirect.py # auto-memoryをRLMへリダイレクト（PostToolUseフック）
 │   └── reset_chunk_counter.py # チャンク後の統計リセット（PostToolUseフック）
 │
 ├── templates/
@@ -359,18 +361,18 @@ rlm-claude/
 
 ### 言語
 
-フックメッセージはデフォルトで英語です。フランス語にするには `RLM_LANG=fr` を設定：
+フックメッセージはデフォルトで英語です。`RLM_LANG=fr` でフランス語、`RLM_LANG=ja` で日本語に設定：
 
 ```bash
 # オプション1：シェルプロファイルでグローバルに設定（~/.zshrc、~/.bashrc）
-export RLM_LANG=fr
+export RLM_LANG=ja   # または fr
 
 # オプション2：~/.claude/settings.jsonでフックごとに設定
 # コマンドを以下に置き換え：
-"command": "RLM_LANG=fr python3 ~/.claude/rlm/hooks/pre_compact_chunk.py"
+"command": "RLM_LANG=ja python3 ~/.claude/rlm/hooks/pre_compact_chunk.py"
 ```
 
-対応言語：`en`（デフォルト）、`fr`。
+対応言語：`en`（デフォルト）、`fr`、`ja`。
 
 ### ストレージディレクトリ
 
@@ -429,6 +431,7 @@ git clone https://github.com/EncrEor/rlm-claude.git /tmp/rlm-setup
 mkdir -p ~/.claude/rlm/hooks
 cp /tmp/rlm-setup/hooks/pre_compact_chunk.py ~/.claude/rlm/hooks/
 cp /tmp/rlm-setup/hooks/reset_chunk_counter.py ~/.claude/rlm/hooks/
+cp /tmp/rlm-setup/hooks/memory_write_redirect.py ~/.claude/rlm/hooks/
 cp /tmp/rlm-setup/hooks/i18n.py ~/.claude/rlm/hooks/
 chmod +x ~/.claude/rlm/hooks/*.py
 
@@ -530,6 +533,7 @@ ls ~/.claude/rlm/hooks/                                  # インストール済
 - [x] **フェーズ7**: MAGMA対応（時間フィルタリング、エンティティ抽出）
 - [x] **フェーズ8**: ハイブリッドセマンティック検索（BM25 + コサイン、Model2Vec）
 - [x] **フェーズ9**: 型付きチャンキング — `chunk_type` パラメータ（snapshot/session/debug/insightリダイレクト）
+- [ ] **フェーズ10**: auto-memory/RLM共存 — Write/Editフックがauto-memoryをRLMへリダイレクト + 日本語i18n
 
 ---
 
@@ -569,7 +573,7 @@ ls ~/.claude/rlm/hooks/                                  # インストール済
 ## 著者
 
 - Ahmed MAKNI ([@EncrEor](https://github.com/EncrEor))
-- Claude Opus 4.5（共同R&D）
+- Claude Opus 4.6（共同R&D）
 
 ## ライセンス
 

@@ -7,7 +7,20 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-_Nothing yet._
+### Added — Phase 10: Auto-memory/RLM Cohabitation
+- New `memory_write_redirect.py` hook — detects writes to Claude Code's auto-memory directory and injects a reminder to use RLM instead
+  - Fires on `Write` and `Edit` PostToolUse events
+  - Only triggers when file path matches `/.claude/projects/*/memory/`
+  - Silently passes through for all other file operations
+- Japanese (`ja`) language support in `hooks/i18n.py` — all hook messages now available in EN/FR/JA
+- New i18n keys: `memory_redirect_title`, `memory_redirect_body` (3 languages)
+- Updated `templates/hooks_settings.json` with Write/Edit hook entries
+
+### Why (Phase 10)
+- With 1M context windows, `/compact` events are rare, reducing the PreCompact hook's effectiveness as an RLM trigger
+- Claude Code's built-in auto-memory system (MEMORY.md files) intercepts "remember this" requests at system prompt level, bypassing RLM
+- The new hook acts as a mechanical guardrail: even when auto-memory fires first, the hook redirects toward RLM for structured, searchable, cross-session storage
+- Auto-memory remains useful as a quick-reference cheat sheet (patterns, ports, shortcuts)
 
 ## [0.10.0] - 2026-02-04
 
