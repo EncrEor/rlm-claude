@@ -173,7 +173,7 @@ Basé sur cette checklist, voici ce qu'on devrait ajouter :
 | Requête | BM25 seul | Avec filtre temporel | Avec entités |
 |---------|-----------|---------------------|--------------|
 | "décisions entre 25 et 30 janvier" | ❌ Retourne 18 janv | ✅ Filtré correctement (7.1) | — |
-| "tous les bugs website_joyjuice" | ⚠️ Incomplet | — | ✅ Filtrage `entity="website_joyjuice"` (7.2) |
+| "tous les bugs my_module" | ⚠️ Incomplet | — | ✅ Filtrage `entity="my_module"` (7.2) |
 | "pourquoi layout produit changé" | ✅ Score 3.70 | — | — |
 
 ---

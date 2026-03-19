@@ -101,9 +101,9 @@ class TestExtractEntities:
         assert "thefuzz" in result["modules"]
 
     def test_extract_modules_keyword(self):
-        content = "Install module website_joyjuice for the website."
+        content = "Install module website_myapp for the website."
         result = _extract_entities(content)
-        assert "website_joyjuice" in result["modules"]
+        assert "website_myapp" in result["modules"]
 
     def test_extract_tickets(self):
         content = "Fixed JJ-123 and GH-456 in this sprint."
@@ -140,11 +140,11 @@ class TestExtractEntities:
         """Entity extraction should work with French text."""
         content = """
         Modifié `server.py` pour ajouter le filtre temporel.
-        Version déployée : v19.0.5.52. Module website_joyjuice mis à jour.
+        Version déployée : v2.3.1. Module website_myapp mis à jour.
         """
         result = _extract_entities(content)
         assert "server.py" in result["files"]
-        assert "website_joyjuice" in result["modules"]
+        assert "website_myapp" in result["modules"]
 
     def test_mixed_content(self):
         """Test extraction from realistic chunk content."""
@@ -158,7 +158,7 @@ class TestExtractEntities:
 
         ### Versions
         - RLM v0.9.0 → v0.10.0
-        - Odoo 19.0.5.52.1
+        - Framework 2.3.1
 
         ### Tickets
         - Lié à GH-789
@@ -195,8 +195,8 @@ class TestEntityMatches:
         assert _entity_matches(chunk_info, "navigation.py") is True
 
     def test_case_insensitive(self):
-        chunk_info = {"entities": {"modules": ["website_joyjuice"]}}
-        assert _entity_matches(chunk_info, "Website_JoyJuice") is True
+        chunk_info = {"entities": {"modules": ["website_myapp"]}}
+        assert _entity_matches(chunk_info, "Website_MyApp") is True
 
     def test_no_match(self):
         chunk_info = {"entities": {"files": ["server.py"]}}

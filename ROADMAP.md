@@ -225,8 +225,8 @@ def grep_multi(
 
 ```python
 rlm_grep("business AND plan")      # Les deux termes
-rlm_grep("odoo OR erp")            # L'un ou l'autre
-rlm_grep("joy juice NOT tunisie")  # Exclusion (P2)
+rlm_grep("django OR flask")         # L'un ou l'autre
+rlm_grep("frontend NOT legacy")    # Exclusion (P2)
 ```
 
 ---
@@ -293,7 +293,7 @@ def test_fuzzy_threshold():
 
 def test_multi_pattern_and():
     """AND mode requiert tous les termes."""
-    create_chunk("test_003", "Business plan Joy Juice 2026")
+    create_chunk("test_003", "Business plan Acme Corp 2026")
     create_chunk("test_004", "Business meeting notes")
 
     result = grep_multi(["business", "juice"], mode="AND")
@@ -361,7 +361,7 @@ Voir Phase 8 ci-dessous pour les détails.
 
 **Nouveau format ID** : `{date}_{project}_{seq}[_{ticket}][_{domain}]`
 - Exemple : `2026-01-18_RLM_001_r&d`
-- Exemple : `2026-01-18_JoyJuice_005_TIC-123_bp`
+- Exemple : `2026-01-18_MyApp_005_TIC-123_bp`
 
 **Implementation complete** (2026-01-18) :
 - `_detect_project()` - Detection auto via env/git/cwd
@@ -370,7 +370,7 @@ Voir Phase 8 ci-dessous pour les détails.
 - `sessions.py` - Gestion sessions (list_sessions, list_domains)
 - `rlm_sessions` / `rlm_domains` - Tools MCP
 - `rlm_grep` / `rlm_search` - Filtres project/domain ajoutes
-- `domains.json.example` - Exemple Joy Juice (template)
+- `domains.json.example` - Example domains (template)
 - `domains.json` - Auto-genere localement (generique)
 
 **Decisions validees** :
@@ -939,7 +939,7 @@ readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
 authors = [
-    { name = "Ahmed MAKNI", email = "ahmed@joyjuice.co" }
+    { name = "Ahmed MAKNI", email = "ahmed.makni@proton.me" }
 ]
 keywords = ["mcp", "claude", "memory", "llm", "context-management"]
 classifiers = [

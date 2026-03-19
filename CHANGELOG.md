@@ -288,7 +288,7 @@ rlm_restore("2025-12-01_001")
 - `rlm_domains` tool - List available domains (31 default)
 - New chunk ID format: `{date}_{project}_{seq}[_{ticket}][_{domain}]`
 - Project auto-detection via `RLM_PROJECT` env, git root, or cwd
-- `domains.json.example` - Template with Joy Juice domains
+- `domains.json.example` - Template with example domains
 - Cross-session filtering: `rlm_grep(..., project="X", domain="Y")`
 - Cross-session filtering: `rlm_search(..., project="X", domain="Y")`
 - `sessions.json` - Session index (auto-created, git-ignored)

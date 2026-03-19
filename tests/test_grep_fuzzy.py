@@ -207,7 +207,7 @@ created: 2026-01-19T10:00:00
     def test_fuzzy_filter_by_project(self):
         """Fuzzy grep should filter by project."""
         self._create_chunk("rlm_001", "Business plan RLM.", project="RLM")
-        self._create_chunk("jj_001", "Business plan Joy Juice.", project="JoyJuice")
+        self._create_chunk("jj_001", "Business plan Acme startup.", project="Acme")
 
         result = self.nav.grep_fuzzy("business", threshold=80, project="RLM")
 
@@ -426,7 +426,7 @@ created: 2026-01-19T10:00:00
 
     def test_common_typo_buisness(self):
         """'buisness' should find 'business'."""
-        self._create_chunk("bp_001", "Le business plan Joy Juice 2026 est pret.")
+        self._create_chunk("bp_001", "Le business plan Acme Corp 2026 est pret.")
 
         result = self.nav.grep_fuzzy("buisness", threshold=75)
 

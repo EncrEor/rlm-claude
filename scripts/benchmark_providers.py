@@ -9,7 +9,7 @@ Compares Model2Vec vs FastEmbed on:
 
 Usage:
     python3 scripts/benchmark_providers.py
-    python3 scripts/benchmark_providers.py --queries "business plan" "créer module odoo" "bug performance"
+    python3 scripts/benchmark_providers.py --queries "business plan" "créer un module" "bug performance"
 """
 
 import json
@@ -32,7 +32,7 @@ CHUNKS_DIR = CONTEXT_DIR / "chunks"
 # Default test queries — mix of keyword-friendly and semantic-only
 DEFAULT_QUERIES = [
     "problème de performance",
-    "comment créer un module Odoo",
+    "comment créer un module Python",
     "business plan investisseur",
     "bug page produit",
     "responsive mobile CSS",

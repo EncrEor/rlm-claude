@@ -95,11 +95,11 @@ class TestTokenizeFr:
 
     def test_numbers_preserved(self):
         """Numbers and version strings should be preserved."""
-        tokens = tokenize_fr("Deploy v19 on VPS Odoo 2026")
+        tokens = tokenize_fr("Deploy v3 on VPS Django 2026")
         assert "deploy" in tokens
-        assert "v19" in tokens
+        assert "v3" in tokens
         assert "vps" in tokens
-        assert "odoo" in tokens
+        assert "django" in tokens
         assert "2026" in tokens
 
     def test_empty_input(self):
@@ -137,15 +137,15 @@ class TestTokenizeFr:
 
     def test_real_world_french_text(self):
         """Test with realistic French business text."""
-        text = "Discussion sur le business plan Joy Juice - scenarios realistes pour 2026"
+        text = "Discussion sur le business plan Acme Corp - scenarios realistes pour 2026"
         tokens = tokenize_fr(text)
 
         expected = [
             "discussion",
             "business",
             "plan",
-            "joy",
-            "juice",
+            "acme",
+            "corp",
             "scenarios",
             "realistes",
             "2026",

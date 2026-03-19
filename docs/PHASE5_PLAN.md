@@ -228,8 +228,8 @@ Sources : [HuggingFace Blog](https://huggingface.co/blog/xhluca/bm25s), [GitHub 
 def test_bm25_basic():
     # Setup
     create_test_chunks([
-        ("chunk1", "Discussion sur le business plan Joy Juice"),
-        ("chunk2", "Configuration Odoo et modules"),
+        ("chunk1", "Discussion sur le business plan Acme Corp"),
+        ("chunk2", "Configuration ERP et modules"),
         ("chunk3", "Le plan strategique pour 2026")
     ])
 
@@ -591,15 +591,15 @@ Exemple : 2026-01-18_RLM_001_TIC-123_bp
 | Composant | Source | Optionnel | Exemple |
 |-----------|--------|-----------|---------|
 | `date` | Auto (systeme) | Non | `2026-01-18` |
-| `project` | Git root ou cwd | Non | `RLM`, `Joy_Claude` |
+| `project` | Git root ou cwd | Non | `RLM`, `MyApp` |
 | `sequence` | Compteur auto | Non | `001`, `002` |
 | `ticket` | Manuel ou detecte | Oui | `TIC-123`, `#456` |
 | `domain` | Liste predefinee | Oui | `bp`, `seo`, `website` |
 
-**Domaines disponibles** (source: listes + labels Trello) :
+**Domaines disponibles** (source: project management stages + tags) :
 
 ```python
-# Listes Trello (departements)
+# Project stages (departments)
 DOMAINS_LISTS = [
     "finance",      # 💰 Finance
     "legal",        # ⚖️ Legal/Admin
@@ -610,7 +610,7 @@ DOMAINS_LISTS = [
     "r&d",          # 🧪 R&D/Innovation
 ]
 
-# Labels Trello (themes)
+# Tags (themes)
 DOMAINS_THEMES = [
     "admin",        # Administratif - demarches, creation SAS
     "qualite",      # Qualite - HACCP, process, compliance
@@ -624,12 +624,12 @@ DOMAINS_THEMES = [
     "deck",         # Deck commercial - Pitch, catalogue
 ]
 
-# Domaines supplementaires (usage courant Joy Juice)
+# Domaines supplementaires (common usage)
 DOMAINS_CUSTOM = [
     "website",      # Site web, templates
     "seo",          # Referencement specifique
     "blog",         # Articles blog
-    "erp",          # Odoo, modules
+    "erp",          # ERP, modules
     "bp",           # Business Plan
     "bi",           # Analytics, reporting
 ]
@@ -645,7 +645,7 @@ DOMAINS = DOMAINS_LISTS + DOMAINS_THEMES + DOMAINS_CUSTOM
   "sessions": {
     "2026-01-18_RLM_001_TIC-123_r&d": {
       "project": "RLM",
-      "path": "/Users/amx/Documents/Joy_Claude/RLM",
+      "path": "/home/user/projects/RLM",
       "ticket": "TIC-123",
       "domain": "r&d",
       "started": "2026-01-18T09:15:00Z",
@@ -661,11 +661,11 @@ DOMAINS = DOMAINS_LISTS + DOMAINS_THEMES + DOMAINS_CUSTOM
 ```python
 # Lister les sessions
 rlm_sessions(limit=10)
-rlm_sessions(project="Joy_Claude")
+rlm_sessions(project="MyApp")
 rlm_sessions(domain="bp")
 
 # Acceder a un chunk d'une autre session
-rlm_peek("@2026-01-17_Joy_Claude_001:003")  # @session:chunk
+rlm_peek("@2026-01-17_MyApp_001:003")  # @session:chunk
 
 # Recherche cross-session
 rlm_grep("business plan", sessions="all")
@@ -735,7 +735,7 @@ def is_immune(chunk: dict) -> bool:
     if chunk.get("access_count", 0) >= 3:
         return True
 
-    # Ticket non-ferme (a implementer avec Trello MCP)
+    # Ticket non-ferme (a implementer with project tracker API)
     # if chunk.get("ticket") and not is_ticket_closed(chunk["ticket"]):
     #     return True
 
@@ -897,7 +897,7 @@ def tokenize_fr(text: str, remove_stopwords: bool = True) -> list[str]:
 ```python
 assert tokenize_fr("Le jus d'orange est tres realiste") == ["jus", "orange", "realiste"]
 assert tokenize_fr("Le jus-de-fruits presse a froid") == ["jus", "fruits", "presse", "froid"]
-assert tokenize_fr("Deploy v19.0.2 on VPS Odoo") == ["deploy", "v19", "vps", "odoo"]
+assert tokenize_fr("Deploy v2.1.0 on VPS Django") == ["deploy", "v2", "vps", "django"]
 ```
 
 ---
@@ -906,7 +906,7 @@ assert tokenize_fr("Deploy v19.0.2 on VPS Odoo") == ["deploy", "v19", "vps", "od
 
 | Question | Options | Priorite |
 |----------|---------|----------|
-| Detection ticket | Regex Trello/GitHub ? MCP Trello ? | P2 |
+| Detection ticket | Regex project tracker/GitHub ? API project tracker ? | P2 |
 | Detection domaine | Manuel / Auto via keywords ? | P2 |
 | Coherence contradictions | Timestamp gagne / Flag / Merge ? | P3 |
 | Privacy chunks sensibles | Encryption ? Exclusion patterns ? | P3 |

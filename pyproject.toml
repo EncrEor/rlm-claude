@@ -10,7 +10,7 @@ readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
 authors = [
-    { name = "Ahmed MAKNI", email = "ahmed@joyjuice.co" }
+    { name = "Ahmed MAKNI", email = "ahmed.makni@proton.me" }
 ]
 keywords = [
     "mcp",

@@ -45,7 +45,7 @@ def rlm_remember(
         content: The insight or fact to remember (be concise but complete)
         category: Type of insight - one of: decision, fact, preference, finding, todo, general
         importance: Priority level - one of: low, medium, high, critical
-        tags: Comma-separated keywords for easier retrieval (e.g., "odoo,bug,migration")
+        tags: Comma-separated keywords for easier retrieval (e.g., "python,bug,migration")
 
     Returns:
         Confirmation with insight ID
@@ -320,7 +320,7 @@ def rlm_grep(
     Args:
         pattern: Text or regex pattern to search for (case-insensitive)
         limit: Maximum number of matches to return (default: 10)
-        project: Filter by project name (e.g., "RLM", "JoyJuice")
+        project: Filter by project name (e.g., "RLM", "MyApp")
         domain: Filter by domain (e.g., "bp", "seo", "r&d")
         fuzzy: Enable fuzzy matching (tolerates typos, Phase 5.2)
         fuzzy_threshold: Minimum similarity score 0-100 for fuzzy (default: 80)
@@ -400,7 +400,7 @@ def rlm_search(
     Args:
         query: Natural language search query (e.g., "business plan discussion")
         limit: Maximum results (default: 5)
-        project: Filter by project name (e.g., "RLM", "JoyJuice")
+        project: Filter by project name (e.g., "RLM", "MyApp")
         domain: Filter by domain (e.g., "bp", "seo", "r&d")
         date_from: Start date inclusive, YYYY-MM-DD (e.g., "2026-01-25")
         date_to: End date inclusive, YYYY-MM-DD (e.g., "2026-01-30")
@@ -486,7 +486,7 @@ def rlm_sessions(project: str = "", domain: str = "", limit: int = 10) -> str:
     conversation history across different projects or work domains.
 
     Args:
-        project: Filter by project name (e.g., "RLM", "JoyJuice")
+        project: Filter by project name (e.g., "RLM", "MyApp")
         domain: Filter by domain (e.g., "bp", "seo", "r&d")
         limit: Maximum number of sessions to return (default: 10)
 

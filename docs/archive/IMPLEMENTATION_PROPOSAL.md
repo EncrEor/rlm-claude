@@ -136,7 +136,7 @@ Un système qui permet à Claude de :
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                     RLM Joy Juice v1                                │
+│                        RLM v1                                       │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
 │  ┌─────────────────────────────────────────────────────────────┐   │
@@ -223,12 +223,12 @@ RLM/context/
 # Session Memory - 2026-01-18
 
 ## Décisions prises
-- BP Odoo est priorité #1 pour janvier
+- Business Plan is priority #1 for January
 - Scénarios renommés OPT → AGR (agressif)
 
 ## Contexte important
 - Ahmed préfère qu'on challenge ses idées
-- Joy Juice = Alpes-Maritimes, pas Tunisie
+- MyApp = production locale, pas import
 
 ## Questions ouvertes
 - Équipements 2028 à définir
@@ -293,7 +293,7 @@ Après analyse, **MCP Server + Hooks** est l'approche la plus puissante et pére
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                     RLM Joy Juice - Architecture Complète               │
+│                     RLM - Architecture Complète                          │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                         │
 │  ┌─────────────────────────────────────────────────────────────────┐   │
@@ -385,8 +385,8 @@ Après analyse, **MCP Server + Hooks** est l'approche la plus puissante et pére
 
   "context": [
     {
-      "key": "joy_juice_location",
-      "value": "Alpes-Maritimes, France (pas Tunisie)",
+      "key": "app_location",
+      "value": "Local production (not imported)",
       "permanent": true
     }
   ],

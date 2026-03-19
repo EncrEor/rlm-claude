@@ -13,7 +13,7 @@ If you discover a security vulnerability in RLM, please report it responsibly:
 
 1. **Do NOT open a public issue**
 2. Use [GitHub Private Vulnerability Reporting](https://github.com/EncrEor/rlm-claude/security/advisories/new)
-3. Or email: ahmed@joyjuice.co
+3. Or email: ahmed.makni@proton.me
 
 ### What to include
 

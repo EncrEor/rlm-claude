@@ -74,15 +74,15 @@ def sample_chunks(temp_context_dir):
     chunks_data = [
         {
             "id": "2026-01-18_001",
-            "content": "Discussion sur le business plan Joy Juice pour 2026.",
-            "summary": "BP Joy Juice 2026",
+            "content": "Discussion sur le business plan startup pour 2026.",
+            "summary": "BP Startup 2026",
             "tags": ["bp", "planning"],
         },
         {
             "id": "2026-01-18_002",
-            "content": "Configuration Odoo 19 et modules website_joyjuice.",
-            "summary": "Config Odoo",
-            "tags": ["odoo", "config"],
+            "content": "Configuration du framework web et modules frontend.",
+            "summary": "Config Framework",
+            "tags": ["framework", "config"],
         },
         {
             "id": "2026-01-18_RLM_001_r&d",

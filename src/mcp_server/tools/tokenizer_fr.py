@@ -222,8 +222,8 @@ def tokenize_fr(text: str, remove_stopwords: bool = True) -> list[str]:
         ['jus', 'orange', 'realiste']
         >>> tokenize_fr("Le jus-de-fruits presse a froid")
         ['jus', 'fruits', 'presse', 'froid']
-        >>> tokenize_fr("Deploy v19.0.2 on VPS Odoo")
-        ['deploy', 'v19', '0', '2', 'vps', 'odoo']
+        >>> tokenize_fr("Deploy v2.3.1 on production server")
+        ['deploy', 'v2', '3', '1', 'production', 'server']
     """
     # Lowercase
     text = text.lower()
@@ -259,8 +259,8 @@ if __name__ == "__main__":
     test_cases = [
         ("Le jus d'orange est tres realiste", ["jus", "orange", "realiste"]),
         ("Le jus-de-fruits presse a froid", ["jus", "fruits", "presse", "froid"]),
-        ("Deploy v19.0.2 on VPS Odoo", ["deploy", "v19", "vps", "odoo"]),
-        ("Le business plan Joy Juice", ["business", "plan", "joy", "juice"]),
+        ("Deploy v2.3.1 on production server", ["deploy", "v2", "production", "server"]),
+        ("Le business plan startup 2026", ["business", "plan", "startup"]),
         ("Phase 4 RLM validee", ["phase", "rlm", "validee"]),
     ]
 

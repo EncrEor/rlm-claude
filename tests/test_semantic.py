@@ -309,7 +309,7 @@ class TestMetadataBoostedSearch:
             chunks_dir,
             "test_chunk.md",
             "---\nsummary: Business plan financier\ntags: bp, finance\n"
-            "project: JoyJuice\ndomain: bp\n---\n\nContenu sur la trésorerie.",
+            "project: MyApp\ndomain: bp\n---\n\nContenu sur la trésorerie.",
         )
 
         searcher = RLMSearch(chunks_dir=chunks_dir)
@@ -319,7 +319,7 @@ class TestMetadataBoostedSearch:
         assert "Business plan financier" in content
         assert "bp" in content
         assert "finance" in content
-        assert "JoyJuice" in content
+        assert "MyApp" in content
         # Original body should still be there
         assert "trésorerie" in content
 
@@ -347,7 +347,7 @@ class TestMetadataBoostedSearch:
             chunks_dir,
             "chunk_a.md",
             "---\nsummary: Analyse trésorerie\ntags: bp, finance\n"
-            "project: JoyJuice\ndomain: bp\n---\n\nDétail du flux de trésorerie mensuel.",
+            "project: MyApp\ndomain: bp\n---\n\nDétail du flux de trésorerie mensuel.",
         )
 
         # Chunk B: no bp metadata, body mentions unrelated topic
@@ -355,7 +355,7 @@ class TestMetadataBoostedSearch:
             chunks_dir,
             "chunk_b.md",
             "---\nsummary: Installation serveur\ntags: infra, vps\n"
-            "project: JoyJuice\ndomain: infra\n---\n\nConfiguration nginx et SSL.",
+            "project: MyApp\ndomain: infra\n---\n\nConfiguration nginx et SSL.",
         )
 
         searcher = RLMSearch(chunks_dir=chunks_dir)

@@ -84,7 +84,7 @@ RLM/
 │   ├── index.json            # Index des chunks (v2.1.0)
 │   ├── sessions.json         # Index des sessions (local, auto-cree)
 │   ├── domains.json          # Domaines suggeres (local, auto-cree)
-│   ├── domains.json.example  # Exemple Joy Juice (tracke par git)
+│   ├── domains.json.example  # Exemple complet (tracke par git)
 │   └── chunks/               # Historique decoupe
 │       └── {date}_{project}_{seq}[_{ticket}][_{domain}].md
 │
@@ -236,7 +236,7 @@ Letta benchmark : filesystem + grep = 74% accuracy > Mem0 avec embeddings (68.5%
 - `_generate_chunk_id(project, ticket, domain)` - Nouveau format
 - `chunk()` et `rlm_chunk` - Params project/ticket/domain ajoutes
 - `domains.json` - Auto-cree avec domaines generiques (13 par defaut)
-- `domains.json.example` - Exemple complet Joy Juice (31 domaines)
+- `domains.json.example` - Exemple complet (31 domaines)
 - Nouveau format ID : `{date}_{project}_{seq}[_{ticket}][_{domain}]`
 
 **5.5b - Session Tracking** :
@@ -262,8 +262,8 @@ Letta benchmark : filesystem + grep = 74% accuracy > Mem0 avec embeddings (68.5%
 **Decisions validees (Session 2026-01-18 apres-midi)** :
 
 1. **Multi-sessions** : Format `{date}_{project}_{seq}_{ticket}_{domain}`
-   - Ticket optionnel (Trello, GitHub...)
-   - Domaines : 23 valeurs (listes Trello + labels + custom)
+   - Ticket optionnel (task manager, GitHub...)
+   - Domaines : 23 valeurs (project tracker stages + labels + custom)
      - Listes : finance, legal, operations, commercial, marketing, rh, r&d
      - Themes : admin, qualite, expertise, performance, visibilite, notoriete, ventes, fidelisation, scaling, deck
      - Custom : website, seo, blog, erp, bp, bi
@@ -399,13 +399,13 @@ Voir [ROADMAP.md](ROADMAP.md) pour les details.
 claude mcp list
 
 # Voir les insights stockes
-cat /Users/amx/Documents/Joy_Claude/RLM/context/session_memory.json
+cat ~/projects/RLM/context/session_memory.json
 
 # Voir les chunks
-cat /Users/amx/Documents/Joy_Claude/RLM/context/index.json
+cat ~/projects/RLM/context/index.json
 
 # Lister les chunks
-ls -la /Users/amx/Documents/Joy_Claude/RLM/context/chunks/
+ls -la ~/projects/RLM/context/chunks/
 
 # Voir l'etat auto-chunk
 cat ~/.claude/rlm/chunk_state.json
@@ -414,10 +414,10 @@ cat ~/.claude/rlm/chunk_state.json
 python3 ~/.claude/rlm/hooks/auto_chunk_check.py
 
 # Git status
-cd /Users/amx/Documents/Joy_Claude/RLM && git status
+cd ~/projects/RLM && git status
 
 # Pousser sur GitHub
-cd /Users/amx/Documents/Joy_Claude/RLM && git add . && git commit -m "message" && git push
+cd ~/projects/RLM && git add . && git commit -m "message" && git push
 ```
 
 ---
@@ -495,7 +495,7 @@ rlm_restore("chunk_id") -> Restaurer un chunk archive (Phase 5.6)
 
 ---
 
-## 9. Cas d'Usage Concrets Joy Juice
+## 9. Cas d'Usage Concrets
 
 | Situation | Tool RLM | Exemple |
 |-----------|----------|---------|

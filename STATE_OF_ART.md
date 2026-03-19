@@ -92,7 +92,7 @@ context = """[... 10M tokens de texte ...]"""
 print(len(context))  # Voir la taille
 print(context[:1000])  # Peek au début
 import re
-matches = re.findall(r"Joy Juice", context)  # Chercher
+matches = re.findall(r"deploy", context)  # Chercher
 ```
 
 #### Les appels récursifs
@@ -365,7 +365,7 @@ Test des limites de BM25 sur 100 chunks / 146 insights :
 | Requête | Score top-1 | Verdict |
 |---------|-------------|---------|
 | "pourquoi layout produit changé" | 3.70 ✅ | BM25 suffisant |
-| "tous les bugs website_joyjuice" | 3.11 ⚠️ | Pertinent mais incomplet |
+| "tous les bugs my_module" | 3.11 ⚠️ | Pertinent mais incomplet |
 | "décisions entre 25 et 30 janvier" | 2.92 ❌ | **Échec** — retourne le 18 janvier |
 
 **Conclusion** : BM25 marche à 80%. Échoue sur requêtes temporelles et agrégation.
@@ -373,7 +373,7 @@ Test des limites de BM25 sur 100 chunks / 146 insights :
 
 **Résultat post-implémentation (01/02/2026)** :
 - Phase 7.1 ✅ : `rlm_search("décisions", date_from="2026-01-25", date_to="2026-01-30")` → filtre correctement
-- Phase 7.2 ✅ : `rlm_grep("bug", entity="website_joyjuice")` → filtre par entité
+- Phase 7.2 ✅ : `rlm_grep("bug", entity="my_module")` → filtre par entité
 - 119 tests passent (28 temporel + 36 entités + 55 existants)
 
 ---
@@ -403,7 +403,7 @@ Test des limites de BM25 sur 100 chunks / 146 insights :
 
 ---
 
-## 8. Synthèse : Quelle Approche pour Joy Juice ?
+## 8. Synthèse : Quelle Approche pour Notre Projet ?
 
 ### 8.1 Notre contexte spécifique
 
@@ -452,4 +452,4 @@ Test des limites de BM25 sur 100 chunks / 146 insights :
 **Version** : 2.0
 **Auteur** : Ahmed + Claude
 **Dernière MAJ** : 2026-02-01
-**Licence** : Usage interne Joy Juice
+**Licence** : MIT
