@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/encreor-rlm-claude-badge.png)](https://mseep.ai/app/encreor-rlm-claude)
+
 # RLM - Infinite Memory for Claude Code
 
 > Your Claude Code sessions forget everything after `/compact`. RLM fixes that.
