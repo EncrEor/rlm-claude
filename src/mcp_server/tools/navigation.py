@@ -846,7 +846,14 @@ def grep(
         # If invalid regex, treat as literal string
         regex = re.compile(re.escape(pattern), re.IGNORECASE)
 
-    for chunk_info in index.get("chunks", []):
+    # Iterate most-recent-first so the `limit` cutoff keeps the freshest matches.
+    # (chunk IDs and created_at both start with YYYY-MM-DD → lexical sort == chronological.)
+    chunks_sorted = sorted(
+        index.get("chunks", []),
+        key=lambda c: c.get("created_at", c.get("created", c.get("id", ""))),
+        reverse=True,
+    )
+    for chunk_info in chunks_sorted:
         # Phase 7.1: Apply temporal filter
         if not _chunk_in_date_range(chunk_info, date_from, date_to):
             continue

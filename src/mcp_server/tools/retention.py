@@ -251,6 +251,69 @@ def get_purge_candidates() -> list[dict]:
 
 
 # =============================================================================
+# SEMANTIC STORE SYNC (Phase 8.2)
+# =============================================================================
+# The vector store (embeddings.npz) must stay in sync with the active chunk set:
+# archiving/purging removes a chunk from active search, so its vector must go too;
+# restoring brings it back, so its vector must be regenerated. All best-effort —
+# semantic search is optional and must never block a retention operation.
+
+
+def _semantic_remove(chunk_id: str) -> None:
+    """Drop a chunk's vector from the semantic store. Never raises."""
+    try:
+        from .vecstore import VectorStore
+
+        store = VectorStore()
+        if store.load() and store.remove(chunk_id):
+            store.save()
+    except Exception:
+        pass  # Semantic is optional, never block retention
+
+
+def _semantic_add(chunk_id: str, md_bytes: bytes) -> None:
+    """(Re)embed a restored chunk into the semantic store. Never raises.
+
+    Mirrors the enrichment used at chunk creation time (tags + summary + body)
+    so a restored vector lands in the same space as the original.
+    """
+    try:
+        from .embeddings import _get_cached_provider
+        from .vecstore import VectorStore
+
+        provider = _get_cached_provider()
+        if provider is None:
+            return
+
+        lines = md_bytes.decode("utf-8", errors="replace").split("\n")
+        body_start, seen, summary, tags = 0, 0, "", ""
+        for i, line in enumerate(lines):
+            if line.strip() == "---":
+                seen += 1
+                if seen == 2:
+                    body_start = i + 1
+                    break
+            elif line.startswith("summary:"):
+                summary = line.split(":", 1)[1].strip()
+            elif line.startswith("tags:"):
+                tags = line.split(":", 1)[1].strip()
+
+        embed_text = "\n".join(lines[body_start:])
+        if summary:
+            embed_text = f"{summary}\n{embed_text}"
+        if tags:
+            embed_text = f"{tags}\n{embed_text}"
+
+        vec = provider.embed([embed_text])[0]
+        store = VectorStore()
+        store.load()
+        store.add(chunk_id, vec)
+        store.save()
+    except Exception:
+        pass  # Semantic is optional, never block retention
+
+
+# =============================================================================
 # ARCHIVE OPERATIONS
 # =============================================================================
 
@@ -333,6 +396,9 @@ def archive_chunk(chunk_id: str) -> dict:
         # Delete original file
         src_file.unlink()
 
+        # Keep semantic store in sync: an archived chunk leaves active search.
+        _semantic_remove(chunk_id)
+
         compression_ratio = (1 - compressed_size / original_size) * 100 if original_size > 0 else 0
 
         return {
@@ -398,6 +464,9 @@ def restore_chunk(chunk_id: str) -> dict:
 
         # Write to active storage
         dst_file.write_bytes(content)
+
+        # Keep semantic store in sync: a restored chunk re-enters active search.
+        _semantic_add(chunk_id, content)
 
         # Get archive metadata
         archive_index = _load_archive_index()
@@ -498,6 +567,9 @@ def purge_chunk(chunk_id: str) -> dict:
 
         # Delete archive file
         archive_file.unlink()
+
+        # Keep semantic store in sync: a purged chunk is gone for good.
+        _semantic_remove(chunk_id)
 
         return {
             "status": "purged",
