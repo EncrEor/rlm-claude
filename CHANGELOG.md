@@ -22,6 +22,16 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The new hook acts as a mechanical guardrail: even when auto-memory fires first, the hook redirects toward RLM for structured, searchable, cross-session storage
 - Auto-memory remains useful as a quick-reference cheat sheet (patterns, ports, shortcuts)
 
+## [0.10.1] - 2026-06-26
+
+### Fixed
+- **`grep` now returns the most *recent* matches instead of the oldest.** It iterated chunks in index insertion order (oldest first) and stopped at `limit`, so any recurring term surfaced only its oldest occurrences and hid recent context. Chunks are now scanned newest-first (`navigation.py`).
+- **The vector store now stays in sync with the active chunk set.** Archiving or purging a chunk now removes its embedding from `embeddings.npz`; restoring re-embeds it. Previously, archived/purged chunks left orphan vectors that polluted semantic search with empty-summary results and let the store grow unbounded (`retention.py`). All sync is best-effort and never blocks a retention operation.
+
+### Added
+- `scripts/reconcile_stores.py` — maintenance tool that reconciles the four stores (active chunks / archive / `index.json` / `embeddings.npz`) against the source of truth (the active `.md` files): drops orphan index entries and vectors, re-embeds missing chunks. Dry-run by default, timestamped backups, embedding-dimension guard.
+- Tests: `tests/test_retention_semantic.py` (archive/purge/restore sync, fail-safe) and `tests/test_grep_ordering.py` (recency ordering) — +6 tests (155 total).
+
 ## [0.10.0] - 2026-02-04
 
 ### Added — Phase 9: Chunking Typé
