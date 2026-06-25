@@ -21,12 +21,15 @@ env/
 Thumbs.db
 
 # Project specific - runtime data (not tracked)
-context/chunks/*.md
-context/session_memory.json
-context/index.json
-context/domains.json
-context/sessions.json
-context/embeddings.npz
+# Whitelist: ignore ALL runtime data in context/, only keep templates/placeholders.
+# (Robuster than per-file blacklist: any new runtime file is ignored by default.)
+context/*
+!context/.gitkeep
+!context/chunks/
+context/chunks/*
+!context/chunks/.gitkeep
+!context/*.template.json
+!context/*.example
 logs/
 *.log
 
