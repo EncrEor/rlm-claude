@@ -148,6 +148,8 @@ RLM intercepte l'événement `/compact` de Claude Code. Avant que votre contexte
 - **`rlm_restore`** - Restaurer des chunks archivés
 - Cycle de vie en 3 zones : **Actif** &rarr; **Archive** (.gz) &rarr; **Purge**
 - Système d'immunité : les tags critiques, l'accès fréquent et certains mots-clés protègent un chunk de l'archivage
+- **Archiver rétrograde, ne supprime pas** : un chunk archivé quitte l'index actif, mais `rlm_search` le retrouve toujours par son résumé et ses tags et le renvoie dans `archived_matches` — `rlm_peek(chunk_id)` le restaure intégralement
+- **Toute lecture compte comme un accès** (peek, grep et search), donc un chunk que vos recherches font remonter atteint l'immunité au lieu d'être archivé comme inutilisé
 
 ### Auto-Chunking & Routage mémoire (Hooks)
 - **Hook PreCompact** : Snapshot automatique avant `/compact` ou auto-compact
@@ -192,6 +194,30 @@ python3 scripts/benchmark_providers.py
 # Backfill des chunks existants (à lancer une fois après installation)
 python3 scripts/backfill_embeddings.py
 ```
+
+#### Vérifier la couverture des embeddings
+
+L'embedding est au mieux : un chunk est toujours écrit, même si le provider est
+indisponible. Ce chunk reste alors invisible à la recherche sémantique tant
+qu'il n'a pas de vecteur — le manque est donc signalé, jamais laissé à
+découvrir des semaines plus tard.
+
+`rlm_status` alerte dès que la couverture est incomplète, nomme la raison quand
+le provider n'a pas pu se charger, et affiche les dernières lignes de `rlm.log`
+(journal en append-only dans votre répertoire de contexte). Pour combler un
+trou :
+
+```bash
+# Dry-run d'abord : liste les chunks qui seraient vectorisés
+python3 scripts/reconcile_stores.py
+
+# Vectorise tout ce qui manque, avec sauvegardes horodatées
+python3 scripts/reconcile_stores.py --apply
+```
+
+Les deux respectent `RLM_CONTEXT_DIR`. Utilisez le même
+`RLM_EMBEDDING_PROVIDER` que votre serveur — le script refuse de mélanger des
+dimensions de vecteurs.
 
 ### Skills Sub-Agent
 - **`/rlm-analyze`** - Analyser un chunk avec un sub-agent isolé
@@ -306,6 +332,7 @@ rlm-claude/
 │       ├── retention.py       # Cycle de vie archive/restauration/purge
 │       ├── embeddings.py      # Providers d'embedding (Model2Vec, FastEmbed)
 │       ├── vecstore.py        # Stockage vectoriel (.npz) pour recherche sémantique
+│       ├── diagnostics.py     # Journal d'avertissements (rlm.log) — les dégradations restent visibles
 │       └── fileutil.py        # I/O sécurisé (écritures atomiques, validation chemins, verrous)
 │
 ├── hooks/                     # Hooks Claude Code

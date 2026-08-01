@@ -147,6 +147,8 @@ RLM hooks into Claude Code's `/compact` event. Before your context is wiped, RLM
 - **`rlm_restore`** - Bring back archived chunks
 - 3-zone lifecycle: **Active** &rarr; **Archive** (.gz) &rarr; **Purge**
 - Immunity system: critical tags, frequent access, and keywords protect chunks
+- **Archiving is a demotion, not a deletion**: archived chunks leave the active index, but `rlm_search` still matches them by summary and tags and returns them under `archived_matches` — `rlm_peek(chunk_id)` restores one in full
+- **Every retrieval counts as an access** (peek, grep and search alike), so a chunk your searches keep surfacing reaches immunity instead of being archived as idle
 
 ### Auto-Chunking & Memory Routing (Hooks)
 - **PreCompact hook**: Automatic snapshot before `/compact` or auto-compact
@@ -191,6 +193,27 @@ python3 scripts/benchmark_providers.py
 # Backfill existing chunks (run once after install)
 python3 scripts/backfill_embeddings.py
 ```
+
+#### Checking embedding coverage
+
+Embedding is best-effort: a chunk is always written, even when the provider is
+unavailable. That chunk is then invisible to semantic search until it gets a
+vector, so the gap is reported rather than left to be discovered later.
+
+`rlm_status` warns whenever coverage is incomplete, names the reason when the
+provider failed to load, and echoes the most recent entries of `rlm.log` (an
+append-only log in your context directory). To heal a gap:
+
+```bash
+# Dry-run first: lists chunks that would be embedded
+python3 scripts/reconcile_stores.py
+
+# Re-embed everything missing, with timestamped backups
+python3 scripts/reconcile_stores.py --apply
+```
+
+Both honour `RLM_CONTEXT_DIR`. Use the same `RLM_EMBEDDING_PROVIDER` as your
+server — the script refuses to mix vector dimensions.
 
 ### Sub-Agent Skills
 - **`/rlm-analyze`** - Analyze a single chunk with an isolated sub-agent
@@ -305,6 +328,7 @@ rlm-claude/
 │       ├── retention.py       # Archive/restore/purge lifecycle
 │       ├── embeddings.py      # Embedding providers (Model2Vec, FastEmbed)
 │       ├── vecstore.py        # Vector store (.npz) for semantic search
+│       ├── diagnostics.py     # Warning log (rlm.log) — degraded ops stay visible
 │       └── fileutil.py        # Safe I/O (atomic writes, path validation, locking)
 │
 ├── hooks/                     # Claude Code hooks
