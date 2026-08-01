@@ -22,6 +22,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The new hook acts as a mechanical guardrail: even when auto-memory fires first, the hook redirects toward RLM for structured, searchable, cross-session storage
 - Auto-memory remains useful as a quick-reference cheat sheet (patterns, ports, shortcuts)
 
+## [0.10.3] - 2026-08-01
+
+### Fixed
+- **A query-less `rlm_recall` now ranks by importance before recency.** It sorted by date alone, so with 34 `critical` insights and the default `limit=10`, the 24 oldest never surfaced — and the oldest are the most settled rules, exactly what a start-of-session recall exists to reload. `critical` now outranks `high` outranks `medium`, newest first within a level. An unrecognised importance sorts last instead of raising, so memories written by earlier versions still rank (`memory.py`).
+
+### Added
+- **Truncated recalls say so.** `recall()` returns `total_matching` alongside `count`, plus `truncated` and a message when results were cut, and `rlm_recall` prints a warning line above the list. A recall that looks complete but isn't is worse than an empty one: that is how two thirds of a six-month-old rule set stayed invisible.
+- Tests: `tests/test_recall_ordering.py` — importance ranking, recency within a level, truncation reporting, no false alarm on complete results, relevance still winning when a query is given, unknown importance tolerated (+6 tests, 169 total).
+
 ## [0.10.2] - 2026-08-01
 
 Five weeks of chunks had been stored without vectors, unnoticed. Everything

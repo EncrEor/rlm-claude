@@ -125,6 +125,8 @@ RLM hooks into Claude Code's `/compact` event. Before your context is wiped, RLM
 ### Memory & Insights
 - **`rlm_remember`** - Save decisions, facts, preferences with categories and importance levels
 - **`rlm_recall`** - Search insights by keyword (multi-word tokenized), category, or importance
+  - Without a query, results rank by **importance first**, then recency — a settled `critical` rule outranks today's `medium` note
+  - **Truncated results say so**: the reply reports how many matched, so a capped recall can't pass for a complete one
 - **`rlm_forget`** - Remove an insight
 - **`rlm_status`** - System overview (insight count, chunk stats, access metrics)
 

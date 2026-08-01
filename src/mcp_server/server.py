@@ -82,7 +82,16 @@ def rlm_recall(query: str = "", category: str = "", importance: str = "", limit:
     if result["count"] == 0:
         return f"No insights found. Total in memory: {result['total_in_memory']}"
 
-    output_lines = [f"Found {result['count']} insights (total: {result['total_in_memory']}):\n"]
+    header = f"Found {result['count']} insights (total: {result['total_in_memory']}):"
+    if result.get("truncated"):
+        # Say it out loud, in the text the model actually reads: a recall that
+        # looks complete but isn't is worse than no recall at all.
+        header += (
+            f"\n⚠️  {result['total_matching']} match this filter — "
+            f"{result['count']} shown. Re-run with a higher limit to see the rest."
+        )
+
+    output_lines = [header + "\n"]
 
     for i, insight in enumerate(result["insights"], 1):
         tags_str = f" [{', '.join(insight['tags'])}]" if insight.get("tags") else ""

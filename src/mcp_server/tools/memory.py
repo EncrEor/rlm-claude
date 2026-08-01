@@ -15,6 +15,10 @@ from .tokenizer_fr import tokenize_fr
 
 MEMORY_FILE = CONTEXT_DIR / "session_memory.json"
 
+# Ranking weight for a query-less recall. Unknown or missing importance sorts
+# last rather than raising: memories written by older versions must still rank.
+IMPORTANCE_ORDER = {"critical": 4, "high": 3, "medium": 2, "low": 1}
+
 
 def _load_memory() -> dict:
     """Load session memory from JSON file."""
@@ -155,18 +159,37 @@ def recall(
         scored_insights.sort(key=lambda x: (x[1], x[0]["created_at"]), reverse=True)
         insights = [ins for ins, _ in scored_insights]
 
-    # Sort by creation date (newest first) and limit
-    # (déjà trié par relevance si query, sinon tri par date)
+    # Without a query, rank by importance first, then recency. Sorting by date
+    # alone silently dropped the oldest insights — which are the most settled
+    # rules, exactly what a start-of-session recall is meant to surface.
     if not query:
-        insights = sorted(insights, key=lambda x: x["created_at"], reverse=True)
+        insights = sorted(
+            insights,
+            key=lambda x: (IMPORTANCE_ORDER.get(x.get("importance", ""), 0), x["created_at"]),
+            reverse=True,
+        )
+
+    total_matching = len(insights)
     insights = insights[:limit]
 
-    return {
+    result = {
         "status": "success",
         "count": len(insights),
+        "total_matching": total_matching,
         "total_in_memory": memory["metadata"]["total_insights"],
         "insights": insights,
     }
+
+    # Announce what was cut. A truncated recall that looks complete is how 24
+    # of 34 critical rules went unnoticed for months.
+    if total_matching > len(insights):
+        result["truncated"] = True
+        result["message"] = (
+            f"{total_matching} insights match, {len(insights)} returned. "
+            f"Raise limit to see the rest."
+        )
+
+    return result
 
 
 def forget(insight_id: str) -> dict:

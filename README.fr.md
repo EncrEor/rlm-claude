@@ -126,6 +126,8 @@ RLM intercepte l'événement `/compact` de Claude Code. Avant que votre contexte
 ### Mémoire et Insights
 - **`rlm_remember`** - Sauvegarder des décisions, faits, préférences avec catégories et niveaux d'importance
 - **`rlm_recall`** - Rechercher des insights par mot-clé (multi-mots tokenisés), catégorie ou importance
+  - Sans query, le classement se fait par **importance d'abord**, puis récence — une règle `critical` ancienne passe devant une note `medium` du jour
+  - **Un résultat tronqué le dit** : la réponse annonce le nombre de correspondances, donc un recall limité ne peut plus passer pour complet
 - **`rlm_forget`** - Supprimer un insight
 - **`rlm_status`** - Vue d'ensemble du système (nombre d'insights, stats chunks, métriques d'accès)
 
