@@ -46,6 +46,17 @@ You: "What did we decide about the API architecture?"
 pip install mcp-rlm-server[all]
 ```
 
+The hooks and templates ship inside the package. Since a pip install gives you
+no repo checkout, ask the package where they landed:
+
+```bash
+python -m mcp_server --hooks-dir       # e.g. .../site-packages/mcp_server/hooks
+python -m mcp_server --templates-dir
+```
+
+Point your `~/.claude/settings.json` hook commands at that path (see
+[Hook Configuration](#hook-configuration)), or copy them to `~/.claude/rlm/hooks/`.
+
 ### Via uv (fast, no global pollution)
 
 ```bash

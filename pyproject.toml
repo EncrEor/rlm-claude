@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mcp-rlm-server"
-version = "0.10.3"
+version = "0.10.4"
 description = "Infinite memory for Claude Code - MCP server inspired by MIT RLM paper"
 readme = "README.md"
 license = "MIT"
@@ -76,6 +76,16 @@ Changelog = "https://github.com/EncrEor/rlm-claude/blob/main/CHANGELOG.md"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/mcp_server"]
+
+# Ship the hooks and templates inside the wheel, not just the sdist. `pip
+# install` installs the wheel, so without this the auto-save hooks the README
+# documents simply weren't there for anyone who didn't clone the repo.
+# They land under mcp_server/ rather than at the top level: a bare `hooks`
+# package in site-packages would squat a very common name.
+# Locate them after install with: python -m mcp_server --hooks-dir
+[tool.hatch.build.targets.wheel.force-include]
+"hooks" = "mcp_server/hooks"
+"templates" = "mcp_server/templates"
 
 [tool.hatch.build.targets.sdist]
 include = [

@@ -28,6 +28,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The new hook acts as a mechanical guardrail: even when auto-memory fires first, the hook redirects toward RLM for structured, searchable, cross-session storage
 - Auto-memory remains useful as a quick-reference cheat sheet (patterns, ports, shortcuts)
 
+## [0.10.4] - 2026-08-01
+
+### Fixed
+- **The wheel now ships the hooks and templates.** `pip install` installs the wheel, and the wheel contained neither — only the sdist did. So the auto-save-before-compact behaviour documented in the README did not exist for anyone who installed the recommended way; the feature was described, shipped in the repo, and absent from the package. They are force-included under `mcp_server/hooks` and `mcp_server/templates` rather than at the top level, since a bare `hooks` package in site-packages would squat a very common import name.
+
+### Added
+- `python -m mcp_server --hooks-dir` and `--templates-dir` print where the bundled files landed, which is otherwise unknowable for a pip install (no repo checkout). Falls back to the repo root for editable/source installs. `--help` documents both.
+- Install instructions in the three READMEs now show how to point `settings.json` at the bundled hooks.
+
 ## [0.10.3] - 2026-08-01
 
 ### Fixed

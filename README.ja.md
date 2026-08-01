@@ -46,6 +46,15 @@ Claude Codeには**コンテキストウィンドウの制限**があります�
 pip install mcp-rlm-server[all]
 ```
 
+フックとテンプレートはパッケージに同梱されています。pip インストールではリポジトリのクローンが手元にないため、パッケージ自身に配置先を尋ねてください：
+
+```bash
+python -m mcp_server --hooks-dir       # 例: .../site-packages/mcp_server/hooks
+python -m mcp_server --templates-dir
+```
+
+`~/.claude/settings.json` のフックコマンドをこのパスに向けるか、`~/.claude/rlm/hooks/` にコピーしてください。
+
 ### uv経由（高速、グローバル環境を汚染しない）
 
 ```bash
