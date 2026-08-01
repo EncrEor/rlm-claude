@@ -250,8 +250,10 @@ dimensions de vecteurs.
 ### Démarrage de session (recommandé)
 
 ```python
-# Charger les règles universelles (applicables quel que soit le sujet)
-rlm_recall(importance="critical")
+# Charger les règles universelles (applicables quel que soit le sujet).
+# Passer un limit supérieur à votre nombre de critical — le défaut est 10, et
+# un recall qui rend 10 règles sur 34 ressemble trait pour trait à un recall complet.
+rlm_recall(importance="critical", limit=50)
 
 # Charger le contexte du sujet en cours
 rlm_recall(query="deployment")
@@ -276,7 +278,7 @@ rlm_remember("WeasyPrint nécessite du CSS inline pour le rendu PDF",
 # Retrouver des insights
 rlm_recall(query="source de vérité")
 rlm_recall(category="decision")
-rlm_recall(importance="critical")    # toutes les règles universelles
+rlm_recall(importance="critical", limit=50)   # toutes les règles universelles (le défaut est 10)
 ```
 
 ### Niveaux d'importance

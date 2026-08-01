@@ -7,8 +7,10 @@ The user decides when to chunk. The system automatically saves before /compact.
 ### Session startup (required)
 
 ```python
-# 1. Load universal rules
-rlm_recall(importance="critical")
+# 1. Load universal rules — pass a limit above your critical count.
+#    The default is 10, and a recall returning 10 of 34 rules looks
+#    exactly like a complete one.
+rlm_recall(importance="critical", limit=50)
 
 # 2. If working on a specific topic, load context
 rlm_recall(query="the_topic")
@@ -79,5 +81,5 @@ rlm_chunk("summary", summary="Session 04/02", tags="session", chunk_type="sessio
 # Search history
 rlm_search("topic")
 rlm_recall(query="keyword")
-rlm_recall(importance="critical")  # all universal rules
+rlm_recall(importance="critical", limit=50)  # all universal rules (default limit is 10)
 ```

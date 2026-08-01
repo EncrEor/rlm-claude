@@ -242,7 +242,7 @@ python3 scripts/reconcile_stores.py --apply
 
 ```python
 # ユニバーサルルールを読み込み（トピックに関係なく適用）
-rlm_recall(importance="critical")
+rlm_recall(importance="critical", limit=50)  # デフォルトの上限は10 — critical の総数より大きい値を指定
 
 # 現在のトピックのコンテキストを読み込み
 rlm_recall(query="deployment")
@@ -267,7 +267,7 @@ rlm_remember("WeasyPrintのPDFレンダリングにはインラインCSSが必�
 # インサイトを検索
 rlm_recall(query="信頼できる情報源")
 rlm_recall(category="decision")
-rlm_recall(importance="critical")    # 全ユニバーサルルール
+rlm_recall(importance="critical", limit=50)   # 全ユニバーサルルール（デフォルトの上限は10）
 ```
 
 ### 重要度レベル

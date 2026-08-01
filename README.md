@@ -246,8 +246,10 @@ server — the script refuses to mix vector dimensions.
 ### Session startup (recommended)
 
 ```python
-# Load universal rules (apply regardless of topic)
-rlm_recall(importance="critical")
+# Load universal rules (apply regardless of topic).
+# Pass a limit above your critical count — the default is 10, and a recall
+# that returns 10 of 34 rules looks exactly like a complete one.
+rlm_recall(importance="critical", limit=50)
 
 # Load context for current topic
 rlm_recall(query="deployment")
@@ -272,7 +274,7 @@ rlm_remember("WeasyPrint requires inline CSS for PDF rendering",
 # Find insights later
 rlm_recall(query="source of truth")
 rlm_recall(category="decision")
-rlm_recall(importance="critical")    # all universal rules
+rlm_recall(importance="critical", limit=50)   # all universal rules (mind the default limit of 10)
 ```
 
 ### Importance levels
