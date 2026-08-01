@@ -1334,7 +1334,7 @@ python3 scripts/backfill_embeddings.py   # retroactif
 |---------|-----------|
 | `src/mcp_server/tools/navigation.py` | `chunk_type` param + validation + YAML + index |
 | `src/mcp_server/server.py` | `chunk_type` param MCP + redirect/error handling |
-| `.claude/rules/rlm-chunk-triggers.md` | Documentation types + exemples + anti-patterns |
+| `.claude/rules/memoire-routage.md` (ex-`rlm-chunk-triggers.md`) | Routage mémoire : règle → fichier · daté → chunk · fait → remember |
 
 ### R&D associée (hors scope Phase 9)
 
