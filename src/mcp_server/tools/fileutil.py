@@ -208,10 +208,11 @@ def locked_json_update(filepath: Path, default: dict | None = None):
     finally:
         fcntl.flock(lock_fd, fcntl.LOCK_UN)
         lock_fd.close()
-        try:
-            lock_file.unlink(missing_ok=True)
-        except OSError:
-            pass
+        # The lock file is deliberately NOT removed. Deleting it lets the next
+        # writer create a fresh inode and take a lock that the current waiter —
+        # blocked on the old inode — knows nothing about, so both proceed at
+        # once. An empty leftover .lock file is the price of a lock that
+        # actually excludes.
 
 
 def load_json_safe(

@@ -121,10 +121,9 @@ class VectorStore:
         finally:
             fcntl.flock(lock_fd, fcntl.LOCK_UN)
             lock_fd.close()
-            try:
-                lock_file.unlink(missing_ok=True)
-            except OSError:
-                pass
+            # Left in place on purpose — see fileutil.locked_json_update: an
+            # unlinked lock file lets two writers hold locks on different
+            # inodes and run concurrently.
 
     def add(self, chunk_id: str, vector) -> None:
         """Add a vector for a chunk.

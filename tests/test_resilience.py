@@ -9,8 +9,11 @@ Each test here maps to a failure that ran unnoticed in production for weeks:
 """
 
 import json
+import os
+import subprocess
+import sys
 from datetime import datetime, timedelta
-from multiprocessing import Process
+from pathlib import Path
 
 import pytest
 
@@ -98,38 +101,50 @@ def test_cooldown_prevents_hammering(monkeypatch):
 # =============================================================================
 
 
-def _worker(context_dir, project, count):
-    """Child process: write `count` chunks into an isolated context."""
-    import os
+# Run in a fresh interpreter, NOT via multiprocessing: this test module imports
+# mcp_server at module level, and a "spawn" child re-imports it before the
+# worker can set RLM_CONTEXT_DIR — so the child would bind to the developer's
+# real context directory and write test chunks into it (it did, once).
+# subprocess with an explicit env resolves the context before any import.
+_WORKER_SRC = """
+import sys
+sys.path.insert(0, {src!r})
+import mcp_server.tools.navigation as nav
 
-    os.environ["RLM_CONTEXT_DIR"] = str(context_dir)
-
-    import importlib
-
-    import mcp_server.tools.fileutil as fileutil
-
-    importlib.reload(fileutil)
-    import mcp_server.tools.navigation as nav
-
-    importlib.reload(nav)
-
-    for i in range(count):
-        nav.chunk(content=f"body {project} {i} " * 30, summary=f"s{project}{i}", project=project)
+project = sys.argv[1]
+for i in range({count}):
+    result = nav.chunk(
+        content="body %s %d " % (project, i) * 30,
+        summary="s%s%d" % (project, i),
+        project=project,
+    )
+    if result.get("status") != "created":
+        sys.exit("chunk rejected: %r" % (result,))
+"""
 
 
 def test_concurrent_chunks_are_not_lost(tmp_path):
-    """Two sessions chunking at once used to share a sequence number.
+    """Concurrent sessions chunking at once used to share a sequence number.
 
     Reproduced before the fix: 18 writes produced 16 files.
     """
     context = tmp_path / "ctx"
     (context / "chunks").mkdir(parents=True)
 
-    procs = [Process(target=_worker, args=(context, f"P{n}", 5)) for n in (1, 2, 3)]
+    src_dir = str(Path(__file__).resolve().parent.parent / "src")
+    env = {**os.environ, "RLM_CONTEXT_DIR": str(context)}
+    code = _WORKER_SRC.format(src=src_dir, count=5)
+
+    procs = [
+        subprocess.Popen([sys.executable, "-c", code, f"P{n}"], env=env, stderr=subprocess.PIPE)
+        for n in (1, 2, 3)
+    ]
+    errors = []
     for p in procs:
-        p.start()
-    for p in procs:
-        p.join(timeout=60)
+        _, err = p.communicate(timeout=120)
+        if p.returncode != 0:
+            errors.append(err.decode(errors="replace").strip())
+    assert not errors, f"worker failed: {errors}"
 
     written = list((context / "chunks").glob("*.md"))
     assert len(written) == 15, f"expected 15 chunks, found {len(written)}"
