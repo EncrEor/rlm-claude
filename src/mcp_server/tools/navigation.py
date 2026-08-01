@@ -24,6 +24,7 @@ import subprocess
 from datetime import datetime
 from pathlib import Path
 
+from .diagnostics import log_warning
 from .fileutil import (
     CONTEXT_DIR,
     MAX_CHUNK_CONTENT_SIZE,
@@ -451,6 +452,25 @@ def _increment_access(chunk_id: str) -> None:
     Args:
         chunk_id: ID of the chunk being accessed
     """
+    _increment_access_many([chunk_id])
+
+
+def _increment_access_many(chunk_ids: list[str]) -> None:
+    """
+    Increment access counters for several chunks in a single locked update.
+
+    Called by every retrieval path (peek, grep, search), because retention
+    decides what to archive from `access_count`: if only peek counted, chunks
+    surfaced daily by search would look untouched and get archived out of
+    reach. Batched to keep one lock acquisition per query, not one per hit.
+
+    Args:
+        chunk_ids: IDs of the chunks that were surfaced to the caller
+    """
+    if not chunk_ids:
+        return
+
+    wanted = set(chunk_ids)
     default_index = {
         "version": "2.0.0",
         "created_at": datetime.now().isoformat(),
@@ -460,14 +480,34 @@ def _increment_access(chunk_id: str) -> None:
         "last_chunking": None,
     }
 
-    with locked_json_update(INDEX_FILE, default=default_index) as index:
-        for chunk_info in index.get("chunks", []):
-            if chunk_info["id"] == chunk_id:
-                chunk_info["access_count"] = chunk_info.get("access_count", 0) + 1
-                chunk_info["last_accessed"] = datetime.now().isoformat()
-                break
-        index["last_chunking"] = datetime.now().isoformat()
-        index["total_chunks"] = len(index.get("chunks", []))
+    try:
+        with locked_json_update(INDEX_FILE, default=default_index) as index:
+            now = datetime.now().isoformat()
+            for chunk_info in index.get("chunks", []):
+                if chunk_info.get("id") in wanted:
+                    chunk_info["access_count"] = chunk_info.get("access_count", 0) + 1
+                    chunk_info["last_accessed"] = now
+            index["total_chunks"] = len(index.get("chunks", []))
+    except Exception as e:
+        # Access tracking is bookkeeping: never fail a read because of it.
+        log_warning("access", f"failed to record access for {len(wanted)} chunk(s): {e}")
+
+
+def _mark_not_embedded(chunk_id: str) -> None:
+    """Flag a chunk as having no vector, so the gap is visible in the index.
+
+    `rlm_status` reads this to warn, and scripts/reconcile_stores.py can heal it.
+    """
+    if not INDEX_FILE.exists():
+        return
+    try:
+        with locked_json_update(INDEX_FILE) as index:
+            for chunk_info in index.get("chunks", []):
+                if chunk_info.get("id") == chunk_id:
+                    chunk_info["embedded"] = False
+                    break
+    except Exception:
+        pass  # Already logged by the caller
 
 
 def _generate_chunk_id(project: str = None, ticket: str = None, domain: str = None) -> str:
@@ -484,29 +524,54 @@ def _generate_chunk_id(project: str = None, ticket: str = None, domain: str = No
     Returns:
         Unique chunk ID string
     """
-    today = datetime.now().strftime("%Y-%m-%d")
-    index = _load_index()
-
-    # Auto-detect project if not provided
     if project is None:
         project = _detect_project()
+    return _next_chunk_id(_load_index(), project, ticket, domain)
 
-    # Find existing chunks for today + project
+
+def _next_chunk_id(index: dict, project: str, ticket: str = None, domain: str = None) -> str:
+    """
+    Compute the next free chunk ID from an already-loaded index.
+
+    Takes the index as an argument (instead of loading it) so the caller can
+    hold the write lock across "pick an ID" and "register it": doing those in
+    two steps let concurrent sessions pick the same sequence number and
+    overwrite each other's chunk.
+
+    Args:
+        index: Index data (must be the one being written back)
+        project: Resolved project name
+        ticket: Optional ticket reference
+        domain: Optional domain
+
+    Returns:
+        Chunk ID that collides with neither the index nor the chunks directory
+    """
+    today = datetime.now().strftime("%Y-%m-%d")
+
     existing_today = [
-        c for c in index["chunks"] if c["id"].startswith(today) and c.get("project") == project
+        c
+        for c in index.get("chunks", [])
+        if c.get("id", "").startswith(today) and c.get("project") == project
     ]
-
     sequence = len(existing_today) + 1
 
-    # Build ID parts
-    parts = [today, project, f"{sequence:03d}"]
+    known_ids = {c.get("id") for c in index.get("chunks", [])}
 
-    if ticket:
-        parts.append(ticket)
-    if domain:
-        parts.append(domain)
+    while True:
+        parts = [today, project, f"{sequence:03d}"]
+        if ticket:
+            parts.append(ticket)
+        if domain:
+            parts.append(domain)
+        candidate = "_".join(parts)
 
-    return "_".join(parts)
+        # Belt and braces: an ID free in the index but present on disk means a
+        # previous run died between the two writes. Never overwrite that file.
+        if candidate not in known_ids and not (CHUNKS_DIR / f"{candidate}.md").exists():
+            return candidate
+
+        sequence += 1
 
 
 VALID_CHUNK_TYPES = ("snapshot", "session", "debug")
@@ -602,9 +667,6 @@ def chunk(
     # Phase 7.2: Extract entities from content
     entities = _extract_entities(content)
 
-    # Phase 5.5: Generate ID with project/ticket/domain
-    chunk_id = _generate_chunk_id(project=project, ticket=ticket, domain=domain)
-    chunk_file = CHUNKS_DIR / f"{chunk_id}.md"
     tokens = _estimate_tokens(content)
 
     # Resolve project for metadata (in case it was auto-detected)
@@ -617,8 +679,25 @@ def chunk(
             entities_yaml_parts.append(f"  {etype}: {', '.join(evals)}")
     entities_yaml = "\n".join(entities_yaml_parts) if entities_yaml_parts else "  (none)"
 
-    # Create chunk file with metadata header
-    header = f"""---
+    # ID reservation, file write and index registration happen under ONE lock.
+    # Split apart, two concurrent sessions read the same index, computed the
+    # same sequence number and wrote the same path — the later write silently
+    # replaced the earlier chunk (reproduced: 18 parallel writes → 16 chunks).
+    default_index = {
+        "version": "2.0.0",
+        "created_at": datetime.now().isoformat(),
+        "chunks": [],
+        "total_chunks": 0,
+        "total_tokens_estimate": 0,
+        "last_chunking": None,
+    }
+
+    with locked_json_update(INDEX_FILE, default=default_index) as index:
+        chunk_id = _next_chunk_id(index, resolved_project, ticket, domain)
+        chunk_file = CHUNKS_DIR / f"{chunk_id}.md"
+        created_at = datetime.now().isoformat()
+
+        header = f"""---
 id: {chunk_id}
 summary: {summary}
 tags: {", ".join(tags or [])}
@@ -628,7 +707,7 @@ entities:
 project: {resolved_project}
 ticket: {ticket or ""}
 domain: {domain or ""}
-created_at: {datetime.now().isoformat()}
+created_at: {created_at}
 tokens_estimate: {tokens}
 content_hash: {content_hash}
 format_version: "2.0"
@@ -636,43 +715,51 @@ format_version: "2.0"
 
 """
 
-    atomic_write_text(chunk_file, header + content)
+        atomic_write_text(chunk_file, header + content)
 
-    # Update index
-    index = _load_index()
-    index["chunks"].append(
-        {
-            "id": chunk_id,
-            "file": f"chunks/{chunk_id}.md",
-            "summary": summary,
-            "tags": tags or [],
-            "tokens_estimate": tokens,
-            "content_hash": content_hash,
-            "access_count": 0,
-            "last_accessed": None,
-            "created_at": datetime.now().isoformat(),
-            # Phase 9 fields
-            "chunk_type": chunk_type,
-            # Phase 5.5 fields
-            "project": resolved_project,
-            "ticket": ticket,
-            "domain": domain,
-            "format_version": "2.0",
-            # Phase 7.2 fields
-            "entities": entities,
-        }
-    )
-    index["total_tokens_estimate"] = sum(c["tokens_estimate"] for c in index["chunks"])
-    _save_index(index)
+        index.setdefault("chunks", []).append(
+            {
+                "id": chunk_id,
+                "file": f"chunks/{chunk_id}.md",
+                "summary": summary,
+                "tags": tags or [],
+                "tokens_estimate": tokens,
+                "content_hash": content_hash,
+                "access_count": 0,
+                "last_accessed": None,
+                "created_at": created_at,
+                # Phase 9 fields
+                "chunk_type": chunk_type,
+                # Phase 5.5 fields
+                "project": resolved_project,
+                "ticket": ticket,
+                "domain": domain,
+                "format_version": "2.0",
+                # Phase 7.2 fields
+                "entities": entities,
+            }
+        )
+        index["total_chunks"] = len(index["chunks"])
+        index["total_tokens_estimate"] = sum(c.get("tokens_estimate", 0) for c in index["chunks"])
+        index["last_chunking"] = created_at
 
     # Phase 8: Generate embedding if semantic search available
     # Phase 8.1: Enrich text with metadata for better semantic matching
+    # Semantic indexing is optional and must never block a chunk write — but a
+    # failure is logged, never swallowed: an unembedded chunk is invisible to
+    # semantic search, and that must be recoverable (scripts/reconcile_stores.py).
+    embedded = False
     try:
-        from .embeddings import _get_cached_provider
+        from .embeddings import _get_cached_provider, get_provider_error
         from .vecstore import VectorStore
 
         provider = _get_cached_provider()
-        if provider is not None:
+        if provider is None:
+            log_warning(
+                "embeddings",
+                f"chunk {chunk_id} stored WITHOUT vector: {get_provider_error() or 'no provider'}",
+            )
+        else:
             embed_text = content
             if summary:
                 embed_text = f"{summary}\n{embed_text}"
@@ -680,11 +767,21 @@ format_version: "2.0"
                 embed_text = f"{', '.join(tags)}\n{embed_text}"
             vec = provider.embed([embed_text])[0]
             store = VectorStore()
-            store.load()
-            store.add(chunk_id, vec)
-            store.save()
-    except Exception:
-        pass  # Semantic is optional, never block chunk creation
+            with store.locked():  # Embed outside the lock, write inside it
+                store.load()
+                store.add(chunk_id, vec)
+                store.save()
+            embedded = True
+    except Exception as e:
+        log_warning(
+            "embeddings",
+            f"chunk {chunk_id} stored WITHOUT vector ({type(e).__name__}: {e})",
+        )
+
+    # Record the outcome so a missing vector is visible in the index, not just
+    # by diffing embeddings.npz against chunks/ months later.
+    if not embedded:
+        _mark_not_embedded(chunk_id)
 
     # Phase 5.5: Register session and link chunk
     if resolved_project:
@@ -907,6 +1004,10 @@ def grep(
 
         if len(matches) >= limit:
             break
+
+    # A chunk found by grep has been used: count it, or retention will judge it
+    # unused and archive it out of search reach.
+    _increment_access_many(list({m["chunk_id"] for m in matches}))
 
     return {
         "status": "success",

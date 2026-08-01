@@ -154,20 +154,46 @@ def rlm_status() -> str:
         access_stats = "\n  No chunks accessed yet\n"
 
     # Phase 8: Semantic status
+    # A coverage gap is reported as a problem with its fix, not as a ratio:
+    # "322/387 embedded" reads like a statistic, and stayed unnoticed for five
+    # weeks while every new chunk was invisible to semantic search.
     semantic_line = ""
     try:
-        from mcp_server.tools.embeddings import _get_cached_provider
+        from mcp_server.tools.embeddings import _get_cached_provider, get_provider_error
         from mcp_server.tools.vecstore import VectorStore
 
         provider = _get_cached_provider()
         if provider is not None:
             store = VectorStore()
             store.load()
-            semantic_line = f"Semantic: {type(provider).__name__} ({len(store.chunk_ids)}/{chunks_result['total_chunks']} embedded)\n"
+            embedded, total = len(store.chunk_ids), chunks_result["total_chunks"]
+            semantic_line = f"Semantic: {type(provider).__name__} ({embedded}/{total} embedded)\n"
+            if total and embedded < total:
+                semantic_line += (
+                    f"  ⚠️  {total - embedded} chunk(s) have NO vector — invisible to semantic "
+                    f"search.\n      Fix: RLM_EMBEDDING_PROVIDER=<provider> python3 "
+                    f"scripts/reconcile_stores.py --apply\n"
+                )
         else:
-            semantic_line = "Semantic: not installed (pip install mcp-rlm-server[semantic])\n"
+            reason = get_provider_error() or "semantic extra not installed"
+            semantic_line = (
+                f"Semantic: UNAVAILABLE — new chunks are stored without vectors\n"
+                f"  Reason: {reason}\n"
+                f"  Fix: pip install mcp-rlm-server[semantic]\n"
+            )
+    except Exception as e:
+        semantic_line = f"Semantic: not available ({type(e).__name__})\n"
+
+    # Surface recent degradations so they are noticed in-session, not by audit.
+    warnings_line = ""
+    try:
+        from mcp_server.tools.diagnostics import recent_warnings
+
+        recent = recent_warnings(3)
+        if recent:
+            warnings_line = "Recent warnings:\n" + "".join(f"  {w}\n" for w in recent)
     except Exception:
-        semantic_line = "Semantic: not available\n"
+        pass
 
     return (
         f"RLM Memory Status (v{mem_result['version']})\n"
@@ -178,6 +204,7 @@ def rlm_status() -> str:
         f"Chunks: {chunks_result['total_chunks']} (~{chunks_result['total_tokens_estimate']} tokens)\n"
         f"  Total accesses: {total_accesses}{access_stats}"
         f"{semantic_line}"
+        f"{warnings_line}"
         f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
         f"Created: {mem_result['created_at'][:16] if mem_result['created_at'] else 'N/A'}\n"
         f"Last updated: {mem_result['last_updated'][:16] if mem_result['last_updated'] else 'never'}"

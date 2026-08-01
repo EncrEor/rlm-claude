@@ -36,13 +36,17 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
+import mcp_server.tools.fileutil as fileutil  # noqa: E402
 from mcp_server.tools.embeddings import _get_cached_provider  # noqa: E402
 from mcp_server.tools.vecstore import VectorStore  # noqa: E402
 
 # Reuse the exact same YAML-aware content extraction used at embed time.
 from backfill_embeddings import extract_content  # noqa: E402
 
-CONTEXT_DIR = ROOT / "context"
+# Honour RLM_CONTEXT_DIR like the server does: hardcoding ROOT/context made
+# this tool silently target a stale directory once the data moved out of the
+# repo (the recommended setup, so the data isn't sitting in a public checkout).
+CONTEXT_DIR = fileutil.CONTEXT_DIR
 INDEX_FILE = CONTEXT_DIR / "index.json"
 CHUNKS_DIR = CONTEXT_DIR / "chunks"
 ARCHIVE_DIR = CONTEXT_DIR / "archive"

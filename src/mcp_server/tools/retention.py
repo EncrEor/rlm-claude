@@ -18,6 +18,7 @@ import gzip
 import json
 from datetime import datetime, timedelta
 
+from .diagnostics import log_warning
 from .fileutil import (
     CONTEXT_DIR,
     MAX_DECOMPRESSED_SIZE,
@@ -265,10 +266,11 @@ def _semantic_remove(chunk_id: str) -> None:
         from .vecstore import VectorStore
 
         store = VectorStore()
-        if store.load() and store.remove(chunk_id):
-            store.save()
-    except Exception:
-        pass  # Semantic is optional, never block retention
+        with store.locked():
+            if store.load() and store.remove(chunk_id):
+                store.save()
+    except Exception as e:
+        log_warning("retention", f"failed to drop vector for {chunk_id}: {e}")
 
 
 def _semantic_add(chunk_id: str, md_bytes: bytes) -> None:
@@ -306,11 +308,12 @@ def _semantic_add(chunk_id: str, md_bytes: bytes) -> None:
 
         vec = provider.embed([embed_text])[0]
         store = VectorStore()
-        store.load()
-        store.add(chunk_id, vec)
-        store.save()
-    except Exception:
-        pass  # Semantic is optional, never block retention
+        with store.locked():
+            store.load()
+            store.add(chunk_id, vec)
+            store.save()
+    except Exception as e:
+        log_warning("retention", f"failed to re-embed restored chunk {chunk_id}: {e}")
 
 
 # =============================================================================
@@ -584,6 +587,51 @@ def purge_chunk(chunk_id: str) -> dict:
 # =============================================================================
 # MCP TOOL FUNCTIONS
 # =============================================================================
+
+
+def search_archives(query: str, limit: int = 5) -> list[dict]:
+    """
+    Find archived chunks whose summary or tags match a query.
+
+    Archived chunks are removed from the active index and from the vector
+    store, so `rlm_search` and `rlm_grep` cannot see them at all. Without this,
+    an archived chunk can only be recovered by someone who already knows its
+    exact ID — which is unknowable without searching. That makes archiving a
+    silent deletion rather than a demotion.
+
+    Matches metadata only (summary, tags): archives stay compressed, no
+    decompression happens here. `rlm_peek(chunk_id)` restores a chunk in full.
+
+    Args:
+        query: Free-text query, matched word by word
+        limit: Maximum matches to return
+
+    Returns:
+        List of {id, summary, tags, archived_at} sorted by match count
+    """
+    terms = [t for t in query.lower().split() if len(t) > 2]
+    if not terms:
+        return []
+
+    scored = []
+    for archive in _load_archive_index().get("archives", []):
+        haystack = f"{archive.get('summary', '')} {' '.join(archive.get('tags', []))}".lower()
+        hits = sum(1 for t in terms if t in haystack)
+        if hits:
+            scored.append(
+                (
+                    hits,
+                    {
+                        "id": archive.get("id", ""),
+                        "summary": archive.get("summary", ""),
+                        "tags": archive.get("tags", []),
+                        "archived_at": archive.get("archived_at", "")[:10],
+                    },
+                )
+            )
+
+    scored.sort(key=lambda x: -x[0])
+    return [entry for _, entry in scored[:limit]]
 
 
 def retention_preview() -> dict:

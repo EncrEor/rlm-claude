@@ -397,6 +397,17 @@ def search(
     # Apply final limit
     results = results[:limit]
 
+    # Surfacing a chunk counts as using it. Without this, retention reads
+    # access_count == 0 on chunks search returns every week and archives them.
+    try:
+        from .navigation import _increment_access_many
+
+        _increment_access_many(
+            [r["chunk_id"] for r in results if r.get("type", "chunk") != "insight"]
+        )
+    except Exception:
+        pass  # Bookkeeping must never break a search
+
     # Build filters summary
     active_filters = {}
     if project:
@@ -410,13 +421,28 @@ def search(
     if entity:
         active_filters["entity"] = entity
 
-    return {
+    # Archived chunks live outside the active index: surface them by metadata
+    # so they stay reachable (rlm_peek restores on access) instead of being
+    # findable only by someone who already knows the ID.
+    archived = []
+    try:
+        from .retention import search_archives
+
+        archived = search_archives(query, limit=3)
+    except Exception:
+        pass
+
+    response = {
         "status": "success",
         "query": query,
         "result_count": len(results),
         "filters": active_filters if active_filters else None,
         "results": results,
     }
+    if archived:
+        response["archived_matches"] = archived
+        response["archived_hint"] = "Archived chunks — rlm_peek(chunk_id) restores them in full."
+    return response
 
 
 # Quick test when run directly

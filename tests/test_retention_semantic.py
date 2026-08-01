@@ -6,6 +6,7 @@ store, and that restoring re-embeds it — without ever blocking the retention
 operation when semantic search is unavailable.
 """
 
+from contextlib import contextmanager
 from datetime import datetime, timedelta
 
 import pytest
@@ -20,6 +21,12 @@ class FakeStore:
 
     def __init__(self, *a, **k):
         pass
+
+    @contextmanager
+    def locked(self):
+        """Mirror the real store's lock so tests catch an unguarded write."""
+        FakeStore.calls.append(("locked",))
+        yield self
 
     def load(self):
         return True

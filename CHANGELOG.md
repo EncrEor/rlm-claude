@@ -22,6 +22,24 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The new hook acts as a mechanical guardrail: even when auto-memory fires first, the hook redirects toward RLM for structured, searchable, cross-session storage
 - Auto-memory remains useful as a quick-reference cheat sheet (patterns, ports, shortcuts)
 
+## [0.10.2] - 2026-08-01
+
+Five weeks of chunks had been stored without vectors, unnoticed. Everything
+below comes from tracking that down: the failures were real, silent, and each
+one is now either impossible or loud.
+
+### Fixed
+- **A transient embedding-provider failure no longer disables embeddings for the lifetime of the process.** `_get_cached_provider()` set its "already loaded" flag *before* attempting the load and cached `None` on any exception. Since loading may reach the HuggingFace Hub, one network hiccup meant every chunk created by that server process was stored without a vector — invisible to semantic search, with no error anywhere. A missing library is still cached (permanent), but any other failure is now retried after a cooldown, and the reason is retained (`get_provider_error()`) (`embeddings.py`).
+- **Concurrent sessions no longer overwrite each other's chunks.** ID generation counted same-day chunks in the index, then the file and index entry were written in separate unlocked steps: two sessions computed the same sequence number and the later write replaced the earlier chunk. Reproduced: 18 parallel writes produced 16 chunks. Reservation, file write and index registration now happen under a single exclusive lock, and an ID already present on disk is never reused (`navigation.py`).
+- **Vector writes are no longer lost under concurrency.** `save()` wrote to a shared `embeddings_tmp.npz`: two writers clobbered each other's temp file, one crashing on rename after its vector was already gone. The temp name is now per-process, and `VectorStore.locked()` guards the read-modify-write cycle used by chunk creation and retention (`vecstore.py`).
+- **Retention no longer archives chunks that search surfaces daily.** `access_count` drives archiving, but only `rlm_peek` ever incremented it — chunks returned by `rlm_search` and `rlm_grep` stayed at zero and became archive candidates. Every retrieval path now records access, batched into one locked update per query (`navigation.py`, `search.py`).
+- **`scripts/reconcile_stores.py` honours `RLM_CONTEXT_DIR`.** It resolved `<repo>/context` unconditionally, so it silently targeted a stale directory for anyone who moved their data out of the checkout (the recommended setup).
+
+### Added
+- **Archived chunks are discoverable again.** Archiving removes a chunk from the active index *and* the vector store, leaving `rlm_peek(exact_id)` as the only way back — an ID that can no longer be searched for. `rlm_search` now also matches archived chunks by summary and tags, returning them under `archived_matches` (metadata only; nothing is decompressed) (`retention.search_archives`).
+- **Degraded operation is now visible.** `rlm_status` reports missing vectors as a problem with its remedy instead of a bare ratio, names the reason when the provider is unavailable, and surfaces recent warnings. New `diagnostics.py` writes an append-only, size-capped `rlm.log`; the `except: pass` around embedding is now a logged warning, and chunks stored without a vector are flagged `embedded: false` in the index.
+- Tests: `tests/test_resilience.py` — provider retry/permanence/cooldown, concurrent chunk writes, ID collision with on-disk files, access counting, archive discoverability (+8 tests, 163 total).
+
 ## [0.10.1] - 2026-06-26
 
 ### Fixed

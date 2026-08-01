@@ -7,6 +7,10 @@ Stores chunk embeddings in a .npz file for fast cosine similarity search.
 All numpy operations are guarded — module degrades gracefully if numpy is absent.
 """
 
+import fcntl
+import os
+import uuid
+from contextlib import contextmanager
 from pathlib import Path
 
 try:
@@ -72,21 +76,55 @@ class VectorStore:
         # Ensure parent directory exists
         self.path.parent.mkdir(parents=True, exist_ok=True)
 
-        # Atomic write: save to temp then rename
-        # np.savez auto-appends .npz if file doesn't end with .npz
-        # So we use a .npz temp file to avoid double extension
-        tmp_path = self.path.parent / (self.path.stem + "_tmp.npz")
+        # Atomic write: save to temp then rename.
+        # np.savez auto-appends .npz if the name doesn't end with it, so the
+        # temp file must already carry the extension.
+        # The name is per-process: a shared "_tmp.npz" meant two concurrent
+        # writers clobbered each other's temp file, and the loser crashed on
+        # rename (FileNotFoundError) after its vector was already lost.
+        tmp_path = (
+            self.path.parent / f"{self.path.stem}_tmp_{os.getpid()}_{uuid.uuid4().hex[:8]}.npz"
+        )
         try:
             np.savez(
                 tmp_path,
                 chunk_ids=np.array(self.chunk_ids, dtype=object),
                 vectors=self.vectors.astype(np.float32),
             )
-            tmp_path.rename(self.path)
+            tmp_path.replace(self.path)
         except Exception:
             if tmp_path.exists():
                 tmp_path.unlink()
             raise
+
+    @contextmanager
+    def locked(self):
+        """Hold an exclusive lock across a read-modify-write of the store.
+
+        Vector writes are read-modify-write (load → add → save). Without a
+        lock, two sessions both load N vectors, each adds one, and whichever
+        saves last drops the other's — silently, since nothing raises.
+
+        Usage:
+            store = VectorStore()
+            with store.locked():
+                store.load()
+                store.add(chunk_id, vec)
+                store.save()
+        """
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        lock_file = self.path.with_suffix(".npz.lock")
+        lock_fd = open(lock_file, "w")
+        try:
+            fcntl.flock(lock_fd, fcntl.LOCK_EX)
+            yield self
+        finally:
+            fcntl.flock(lock_fd, fcntl.LOCK_UN)
+            lock_fd.close()
+            try:
+                lock_file.unlink(missing_ok=True)
+            except OSError:
+                pass
 
     def add(self, chunk_id: str, vector) -> None:
         """Add a vector for a chunk.
