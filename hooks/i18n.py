@@ -28,6 +28,13 @@ MESSAGES = {
             "What isn't chunked will be LOST after compact.\n"
             "Chunk now, then compact will continue."
         ),
+        "compact_blocked_header": "COMPACT BLOCKED - no rlm_chunk() for {age}.",
+        "compact_relaunch": "Then re-run /compact - it will pass ({minutes} min window).",
+        "compact_auto_warning": (
+            "Auto-compact with no recent chunk ({age}) - save NOT guaranteed. "
+            "Chunk at the end of the sequence."
+        ),
+        "compact_age_never": "ever",
         # memory_write_redirect.py
         "memory_redirect_title": "AUTO-MEMORY → RLM ?",
         "memory_redirect_body": (
@@ -54,6 +61,13 @@ MESSAGES = {
             "⚠️ Ce qui n'est pas chunké sera PERDU après le compact.\n"
             "Chunk maintenant, puis le compact continuera."
         ),
+        "compact_blocked_header": "COMPACT BLOQUÉ - aucun rlm_chunk() depuis {age}.",
+        "compact_relaunch": "Puis relancer /compact - il passera (fenêtre {minutes} min).",
+        "compact_auto_warning": (
+            "Auto-compact sans chunk récent ({age}) - sauvegarde NON garantie. "
+            "Penser à chunker en fin de séquence."
+        ),
+        "compact_age_never": "toujours",
         # memory_write_redirect.py
         "memory_redirect_title": "AUTO-MEMORY → RLM ?",
         "memory_redirect_body": (
@@ -80,6 +94,13 @@ MESSAGES = {
             "⚠️ チャンクされていない情報はコンパクト後に失われます。\n"
             "今すぐチャンクしてください。"
         ),
+        "compact_blocked_header": "コンパクトをブロックしました - {age}の間 rlm_chunk() がありません。",
+        "compact_relaunch": "その後 /compact を再実行してください（{minutes}分のウィンドウ内なら通ります）。",
+        "compact_auto_warning": (
+            "最近のチャンクなしで自動コンパクト（{age}）- 保存は保証されません。"
+            "処理の最後にチャンクしてください。"
+        ),
+        "compact_age_never": "開始以来ずっと",
         # memory_write_redirect.py
         "memory_redirect_title": "AUTO-MEMORY → RLM ?",
         "memory_redirect_body": (

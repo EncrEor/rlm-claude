@@ -7,6 +7,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed — PreCompact hook v2
+- **A manual `/compact` is now blocked (`exit 2`) when no `rlm_chunk()` happened in the last 15 minutes**, with the reason written to stderr so it reaches the model, not just the terminal. Chunk, then re-run `/compact` — it passes. The previous version emitted a `systemMessage` and `exit 0`: the reminder was displayed to the user but never reached Claude, and nothing was blocked, so the documented "auto-save before compact" did not exist.
+- **Auto-compact is never blocked** — only warned. Blocking there would strand a session at context saturation with no way out.
+- Neither branch ever creates a chunk on its own: chunking stays a deliberate act. Freshness is read from `chunk_state.json`, written by the `reset_chunk_counter.py` PostToolUse hook on every `rlm_chunk` call.
+- New i18n keys in EN/FR/JA: `compact_blocked_header`, `compact_relaunch`, `compact_auto_warning`, `compact_age_never`.
+
 ### Added — Phase 10: Auto-memory/RLM Cohabitation
 - New `memory_write_redirect.py` hook — detects writes to Claude Code's auto-memory directory and injects a reminder to use RLM instead
   - Fires on `Write` and `Edit` PostToolUse events
