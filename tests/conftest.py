@@ -8,10 +8,27 @@ Provides:
 """
 
 import json
+import os
+import tempfile
 from datetime import datetime
 from pathlib import Path
 
 import pytest
+
+# Bind every mcp_server module to a throwaway context BEFORE it gets imported.
+# CONTEXT_DIR is resolved once, at import time (fileutil.resolve_context_dir), and
+# the other modules derive their paths from it: diagnostics.LOG_FILE, the default
+# embeddings.npz of VectorStore... Without this the suite ran against the
+# developer's real ~/.claude/rlm/context: it appended fake warnings to the live
+# rlm.log (surfaced by rlm_status as if they were real) and tried to write test
+# vectors into the live store — stopped only by a dimension mismatch.
+# Unconditional on purpose: a shell that exports RLM_CONTEXT_DIR for the MCP
+# server points at real data too.
+os.environ["RLM_CONTEXT_DIR"] = tempfile.mkdtemp(prefix="rlm-test-context-")
+# Same for the provider: the tests assume the default one (they patch
+# Model2VecProvider). Inheriting RLM_EMBEDDING_PROVIDER=fastembed from the
+# MCP server environment made three of them fail.
+os.environ.pop("RLM_EMBEDDING_PROVIDER", None)
 
 
 @pytest.fixture

@@ -19,6 +19,10 @@ This tool brings index.json and embeddings.npz back in sync with that truth:
 Safety:
 - Dry-run by default. Pass --apply to write.
 - Timestamped backups of index.json and embeddings.npz before any write.
+- Safe while sessions are live: vectors are computed outside the lock and written
+  inside VectorStore.locked() on a fresh load; index.json goes through
+  locked_json_update() — never a rewrite of the snapshot read at startup.
+- A healed chunk loses the `embedded: false` flag set by navigation._mark_not_embedded().
 - Aborts if the embedding provider dimension != existing vectors' dimension
   (prevents mixing a 256-dim Model2Vec vector into a 384-dim FastEmbed store).
 
@@ -123,6 +127,15 @@ def main() -> None:
             sys.exit(1)
         print(f"Provider : {type(provider).__name__} (dim={provider.dim()}) — OK\n")
 
+    # ---- Embed the missing chunks first: slow, and done outside any lock ----
+    new_vectors = {}
+    for cid in vec_add:
+        content = extract_content(CHUNKS_DIR / f"{cid}.md")
+        if not content.strip():
+            print(f"  SKIP {cid}: contenu vide")
+            continue
+        new_vectors[cid] = provider.embed([content])[0]
+
     # ---- Backups ----
     ts = _ts()
     idx_bak = CONTEXT_DIR / f"index.backup_{ts}.json"
@@ -133,43 +146,57 @@ def main() -> None:
         emb_bak.write_bytes(EMBEDDINGS_FILE.read_bytes())
         print(f"Backup embeddings -> {emb_bak.name}")
 
-    # ---- Apply: index ----
-    index["chunks"] = idx_keep
-    index["total_chunks"] = len(idx_keep)
-    INDEX_FILE.write_text(json.dumps(index, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"\nindex.json : {len(idx_chunks)} -> {len(idx_keep)} entrées")
+    # ---- Apply: index (locked read-modify-write on the LIVE file) ----
+    # Sessions keep writing index.json while this runs. Rewriting the snapshot
+    # read at startup would silently drop every chunk they indexed meanwhile,
+    # so the change is recomputed on fresh data, under the same lock they use.
+    stale_at_start = {c.get("id") for c in idx_drop}
+    with fileutil.locked_json_update(INDEX_FILE) as live:
+        live_active = _active_ids()
+        n_before = len(live.get("chunks", []))
+        # Drop only what was file-less at startup AND still is: never an entry
+        # that appeared (or whose file moved) during the run.
+        live["chunks"] = [
+            c
+            for c in live.get("chunks", [])
+            if not (c.get("id") in stale_at_start and c.get("id") not in live_active)
+        ]
+        flags_cleared = 0
+        for c in live["chunks"]:
+            # navigation._mark_not_embedded() flags a chunk written without a
+            # vector; once healed, the flag would be a lie.
+            if c.get("id") in new_vectors and c.pop("embedded", None) is False:
+                flags_cleared += 1
+        live["total_chunks"] = len(live["chunks"])
+        n_after = len(live["chunks"])
+    print(f"\nindex.json : {n_before} -> {n_after} entrées, "
+          f"{flags_cleared} drapeau(x) « embedded: false » levé(s)")
 
-    # ---- Apply: vecstore remove ----
-    for cid in vec_drop:
-        store.remove(cid)
-
-    # ---- Apply: vecstore add (embed missing) ----
-    added = 0
-    for cid in vec_add:
-        f = CHUNKS_DIR / f"{cid}.md"
-        content = extract_content(f)
-        if not content.strip():
-            print(f"  SKIP {cid}: contenu vide")
-            continue
-        vec = provider.embed([content])[0]
-        store.add(cid, vec)
-        added += 1
-    store.save()
-    print(f"embeddings : retirés {len(vec_drop)}, ajoutés {added} -> "
+    # ---- Apply: vecstore (same rule: fresh load inside the lock) ----
+    with store.locked():
+        store.load()
+        for cid in vec_drop:
+            store.remove(cid)
+        for cid, vec in new_vectors.items():
+            store.add(cid, vec)
+        store.save()
+    print(f"embeddings : retirés {len(vec_drop)}, ajoutés {len(new_vectors)} -> "
           f"{len(store.chunk_ids)} vecteurs")
 
-    # ---- Verify ----
+    # ---- Verify (against the state NOW, not the startup snapshot) ----
+    active_now = _active_ids()
     final_store = VectorStore()
     final_store.load()
     fids = set(final_store.chunk_ids)
-    ok = (fids == active) and (len(index["chunks"]) == len(active))
+    final_index = json.loads(INDEX_FILE.read_text(encoding="utf-8"))
+    n_index = len(final_index.get("chunks", []))
+    ok = (fids == active_now) and (n_index == len(active_now))
     print("\n=== VÉRIFICATION ===")
-    print(f"vecstore == actifs ? {'OUI' if fids == active else 'NON'} "
-          f"({len(fids)} vs {len(active)})")
-    print(f"index == actifs ?    {'OUI' if len(index['chunks']) == len(active) else 'NON'} "
-          f"({len(index['chunks'])} vs {len(active)})")
+    print(f"vecstore == actifs ? {'OUI' if fids == active_now else 'NON'} "
+          f"({len(fids)} vs {len(active_now)})")
+    print(f"index == actifs ?    {'OUI' if n_index == len(active_now) else 'NON'} "
+          f"({n_index} vs {len(active_now)})")
     print("\n✅ Réconciliation réussie." if ok else "\n⚠️  Incohérence résiduelle, vérifier.")
-
 
 if __name__ == "__main__":
     main()

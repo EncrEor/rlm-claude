@@ -12,6 +12,7 @@ import json
 import os
 import subprocess
 import sys
+import types
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -94,6 +95,62 @@ def test_cooldown_prevents_hammering(monkeypatch):
     embeddings._get_cached_provider()
     embeddings._get_cached_provider()
     assert len(attempts) == 1
+
+
+# =============================================================================
+# The suite itself must never touch the developer's real memory
+# =============================================================================
+
+
+def test_suite_is_bound_to_a_throwaway_context():
+    """conftest.py redirects RLM_CONTEXT_DIR before any import; this fails if it stops."""
+    import mcp_server.tools.diagnostics as diagnostics
+    import mcp_server.tools.fileutil as fileutil
+    import mcp_server.tools.vecstore as vecstore
+
+    real = Path.home() / ".claude" / "rlm"
+    for bound in (fileutil.CONTEXT_DIR, diagnostics.LOG_FILE, vecstore.DEFAULT_EMBEDDINGS_PATH):
+        assert real not in bound.resolve().parents, f"{bound} points at the real RLM context"
+    assert str(fileutil.CONTEXT_DIR) == os.environ["RLM_CONTEXT_DIR"]
+
+
+# =============================================================================
+# FastEmbed model cache: must survive the OS sweeping its temp directory
+# =============================================================================
+
+
+def test_fastembed_cache_is_persistent_by_default(monkeypatch):
+    """fastembed defaults to the temp dir; macOS sweeps it and the next load fails."""
+    monkeypatch.delenv("FASTEMBED_CACHE_PATH", raising=False)
+
+    assert Path(embeddings._fastembed_cache_dir()) == Path.home() / ".cache" / "fastembed"
+
+
+def test_fastembed_cache_honours_env_override(monkeypatch, tmp_path):
+    """FASTEMBED_CACHE_PATH is fastembed's own knob: it keeps the last word."""
+    monkeypatch.setenv("FASTEMBED_CACHE_PATH", str(tmp_path))
+
+    assert embeddings._fastembed_cache_dir() == str(tmp_path)
+
+
+def test_fastembed_provider_hands_cache_dir_to_fastembed(monkeypatch, tmp_path):
+    """The provider must pass the path explicitly, not rely on fastembed's default."""
+    seen = {}
+
+    class FakeTextEmbedding:
+        def __init__(self, model_name, cache_dir=None, **kwargs):
+            seen["model_name"] = model_name
+            seen["cache_dir"] = cache_dir
+
+    fake_module = types.ModuleType("fastembed")
+    fake_module.TextEmbedding = FakeTextEmbedding
+    monkeypatch.setitem(sys.modules, "fastembed", fake_module)
+    monkeypatch.setenv("FASTEMBED_CACHE_PATH", str(tmp_path))
+
+    embeddings.FastEmbedProvider()
+
+    assert seen["cache_dir"] == str(tmp_path)
+    assert seen["model_name"] == embeddings.FastEmbedProvider.MODEL_NAME
 
 
 # =============================================================================

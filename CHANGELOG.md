@@ -7,6 +7,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed — FastEmbed model cache no longer lives in the temp directory
+- fastembed defaults to `tempfile.gettempdir()/fastembed_cache`. macOS sweeps that directory: the ~235 MB model blob disappeared while the snapshot symlinks stayed, the load failed with `NO_SUCHFILE` instead of re-downloading, and every chunk written meanwhile was stored without a vector (4 chunks on 26-27 Sept. 2026, found by `rlm_status`). `FastEmbedProvider` now passes a persistent `cache_dir` (`~/.cache/fastembed`); `FASTEMBED_CACHE_PATH` still overrides it.
+- `scripts/reconcile_stores.py` is safe to run while sessions are live: vectors are computed outside the lock and written inside `VectorStore.locked()` on a fresh load, and `index.json` goes through `locked_json_update()` instead of rewriting the snapshot read at startup (which would have dropped any chunk indexed by another session meanwhile). A healed chunk also loses the `embedded: false` flag set at write time.
+- The test suite no longer runs against the developer's real context: `tests/conftest.py` binds `RLM_CONTEXT_DIR` to a throwaway directory before any `mcp_server` import. `CONTEXT_DIR` is resolved at import time, so the suite used to append fake warnings to the live `rlm.log` (surfaced by `rlm_status` as real ones) and to attempt writes of test vectors into the live store — stopped only by a dimension mismatch. A guard test fails if the redirection ever stops. An inherited `RLM_EMBEDDING_PROVIDER` is dropped as well: three provider tests assume the default provider and failed under `fastembed`.
+
 ### Changed — PreCompact hook v2
 - **A manual `/compact` is now blocked (`exit 2`) when no `rlm_chunk()` happened in the last 15 minutes**, with the reason written to stderr so it reaches the model, not just the terminal. Chunk, then re-run `/compact` — it passes. The previous version emitted a `systemMessage` and `exit 0`: the reminder was displayed to the user but never reached Claude, and nothing was blocked, so the documented "auto-save before compact" did not exist.
 - **Auto-compact is never blocked** — only warned. Blocking there would strand a session at context saturation with no way out.

@@ -14,6 +14,7 @@ All dependencies are optional — returns None if unavailable.
 import os
 import time
 from abc import ABC, abstractmethod
+from pathlib import Path
 
 try:
     import numpy as np
@@ -64,6 +65,19 @@ class Model2VecProvider(EmbeddingProvider):
         return self.DIM
 
 
+def _fastembed_cache_dir() -> str:
+    """Where the FastEmbed model is cached on disk — a persistent location.
+
+    fastembed's own default is ``tempfile.gettempdir()/fastembed_cache``. macOS
+    sweeps the temp directory: the ~235 MB model blob goes while the snapshot
+    symlinks stay, so the next load fails with NO_SUCHFILE instead of
+    re-downloading, and every chunk written meanwhile is stored without a vector.
+
+    ``FASTEMBED_CACHE_PATH`` (fastembed's own override) still wins when set.
+    """
+    return os.environ.get("FASTEMBED_CACHE_PATH") or str(Path.home() / ".cache" / "fastembed")
+
+
 class FastEmbedProvider(EmbeddingProvider):
     """Embedding provider using FastEmbed (paraphrase-multilingual-MiniLM-L12-v2).
 
@@ -76,7 +90,7 @@ class FastEmbedProvider(EmbeddingProvider):
     def __init__(self):
         from fastembed import TextEmbedding
 
-        self._model = TextEmbedding(model_name=self.MODEL_NAME)
+        self._model = TextEmbedding(model_name=self.MODEL_NAME, cache_dir=_fastembed_cache_dir())
 
     def embed(self, texts: list[str]):
         # fastembed returns a generator
