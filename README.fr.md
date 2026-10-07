@@ -119,9 +119,12 @@ Vos données (`~/.claude/rlm/`) ne sont pas touchées. Seul le chemin du serveur
                                           └────────────────────┘
 ```
 
-### Sauvegarde automatique avant perte de contexte
+### Rien ne se perd en silence
 
-RLM intercepte l'événement `/compact` de Claude Code. Avant que votre contexte ne soit effacé, RLM **sauvegarde automatiquement un snapshot**. Rien à faire.
+Chunker est un acte délibéré : RLM n'écrit jamais un chunk de lui-même. En revanche, il veille à ce qu'une session non sauvegardée ne passe pas inaperçue :
+
+- **Avant `/compact`** : un `/compact` manuel est bloqué si rien n'a été chunké dans les 15 dernières minutes. Chunkez, relancez, il passe. L'auto-compact n'est jamais bloqué (cela coincerait une session saturée), seulement signalé.
+- **Après une session** : un hook trace ce que chaque session a touché (chemins de fichiers et noms de programmes autorisés, jamais de ligne de commande). Au démarrage suivant, une session qui a modifié des choses et s'est terminée sans chunk est listée avec son transcript, pour pouvoir encore la rattraper. Les plantages et les terminaux fermés sont couverts aussi : c'est l'absence de chunk qui est détectée, pas une sortie propre.
 
 ### Deux systèmes de mémoire
 
@@ -164,9 +167,11 @@ RLM intercepte l'événement `/compact` de Claude Code. Avant que votre contexte
 - **Archiver rétrograde, ne supprime pas** : un chunk archivé quitte l'index actif, mais `rlm_search` le retrouve toujours par son résumé et ses tags et le renvoie dans `archived_matches` — `rlm_peek(chunk_id)` le restaure intégralement
 - **Toute lecture compte comme un accès** (peek, grep et search), donc un chunk que vos recherches font remonter atteint l'immunité au lieu d'être archivé comme inutilisé
 
-### Auto-Chunking & Routage mémoire (Hooks)
-- **Hook PreCompact** : Snapshot automatique avant `/compact` ou auto-compact
-- **Hook PostToolUse (rlm_chunk)** : Suivi des stats après opérations sur les chunks
+### Filets de sécurité & Routage mémoire (Hooks)
+- **Hook PreCompact** : bloque un `/compact` manuel sans chunk depuis 15 minutes ; signale (sans jamais bloquer) l'auto-compact. Il ne crée jamais de chunk lui-même
+- **Hook PostToolUse (rlm_chunk)** : note l'heure du dernier chunk (lue par le hook PreCompact) et relie le chunk à sa session (`session_id` et `transcript_path` dans l'index)
+- **Hook PostToolUse (Edit/Write/Bash)** — *trace de session* : ajoute dans `~/.claude/rlm/sessions/<session_id>.jsonl` les chemins modifiés et le nom des programmes autorisés qu'une session lance. Jamais la ligne de commande : elle peut contenir un mot de passe
+- **Hook SessionStart** — *sessions non sauvegardées* : liste les sessions passées qui ont modifié des choses et se sont terminées sans chunk ni acquittement, avec le chemin de leur transcript. Acquitter : `python3 ~/.claude/rlm/hooks/session_orphans.py --ack <session_id> "raison"`
 - **Hook PostToolUse (Write/Edit)** : Détecte les écritures dans l'auto-memory de Claude Code et redirige vers RLM pour les décisions, insights et logs de session
 - Philosophie user-driven : vous décidez quand chunker, le système sauvegarde avant la perte
 
@@ -240,19 +245,25 @@ dimensions de vecteurs.
 
 ## Comparaison
 
-| Fonctionnalité | Contexte brut | Letta/MemGPT | **RLM** |
-|---------------|---------------|--------------|---------|
-| Mémoire persistante | Non | Oui | **Oui** |
-| Fonctionne avec Claude Code | N/A | Non (runtime propre) | **MCP natif** |
-| Auto-save avant compact | Non | N/A | **Oui (hooks)** |
-| Recherche (regex + BM25 + sémantique) | Non | Basique | **Oui** |
-| Recherche floue (tolérance typos) | Non | Non | **Oui** |
-| Support multi-projet | Non | Non | **Oui** |
-| Rétention intelligente (archive/purge) | Non | Basique | **Oui** |
-| Analyse sub-agent | Non | Non | **Oui** |
-| Installation sans config | N/A | Complexe | **3 lignes** |
-| Support FR/EN/JA | N/A | EN uniquement | **3 langues** |
-| Coût | Gratuit | Self-hosted | **Gratuit** |
+| Fonctionnalité | Contexte brut | Letta/MemGPT | claude-mem | **RLM** |
+|---------------|---------------|--------------|------------|---------|
+| Mémoire persistante | Non | Oui | Oui | **Oui** |
+| Fonctionne avec Claude Code | N/A | Non (runtime propre) | Plugin (hooks + worker) | **MCP natif + hooks** |
+| Ce qui est sauvegardé | Rien | Géré par l'agent | Chaque appel d'outil, compressé par un LLM | **Ce que vous chunkez ; les sessions non sauvegardées sont signalées** |
+| Appels LLM en arrière-plan | Non | Oui | Oui (par observation) | **Aucun** |
+| Garde-fou avant compact | Non | N/A | N/A (capture en continu) | **Oui (`/compact` manuel bloqué sans chunk)** |
+| Recherche (regex + BM25 + sémantique) | Non | Basique | Plein texte + vectoriel optionnel | **Oui** |
+| Recherche floue (tolérance typos) | Non | Non | — | **Oui** |
+| Support multi-projet | Non | Non | Oui | **Oui** |
+| Rétention intelligente (archive/purge) | Non | Basique | — | **Oui** |
+| Analyse sub-agent | Non | Non | — | **Oui** |
+| Installation sans config | N/A | Complexe | Une commande | **3 lignes** |
+| Support FR/EN/JA | N/A | EN uniquement | Modes multilingues | **3 langues** |
+| Coût | Gratuit | Self-hosted | Usage LLM ou offre hébergée | **Gratuit** |
+
+— = non évalué. La colonne claude-mem reflète sa documentation d'octobre 2026.
+
+claude-mem et RLM font des paris opposés. claude-mem enregistre tout automatiquement et dépense des appels de modèle pour le compresser ; RLM ne garde que ce que vous décidez de garder, sans coût de modèle, et veille à ce qu'une session oubliée vous soit signalée au lieu d'être perdue en silence.
 
 ---
 
@@ -352,9 +363,12 @@ rlm-claude/
 │
 ├── hooks/                     # Hooks Claude Code
 │   ├── i18n.py                # Traductions (EN/FR/JA) pour les messages des hooks
-│   ├── pre_compact_chunk.py   # Auto-save avant /compact (hook PreCompact)
+│   ├── pre_compact_chunk.py   # Garde-fou avant /compact (hook PreCompact)
 │   ├── memory_write_redirect.py # Redirection auto-memory vers RLM (hook PostToolUse)
-│   └── reset_chunk_counter.py # Reset stats après chunk (hook PostToolUse)
+│   ├── reset_chunk_counter.py # Heure du dernier chunk + lien chunk ↔ session (hook PostToolUse)
+│   ├── session_trace.py       # Ce qu'une session touche, métadonnées seules (hook PostToolUse)
+│   ├── session_orphans.py     # Sessions non sauvegardées au démarrage, --ack (hook SessionStart)
+│   └── session_common.py      # Chemins, config et mise à jour verrouillée de l'index
 │
 ├── templates/
 │   ├── hooks_settings.json    # Template de config hooks
@@ -394,13 +408,52 @@ L'installeur configure automatiquement les hooks dans `~/.claude/settings.json` 
         "hooks": [{ "type": "command", "command": "python3 ~/.claude/rlm/hooks/pre_compact_chunk.py" }]
       }
     ],
-    "PostToolUse": [{
-      "matcher": "mcp__rlm-server__rlm_chunk",
-      "hooks": [{ "type": "command", "command": "python3 ~/.claude/rlm/hooks/reset_chunk_counter.py" }]
+    "PostToolUse": [
+      {
+        "matcher": "mcp__rlm-server__rlm_chunk",
+        "hooks": [{ "type": "command", "command": "python3 ~/.claude/rlm/hooks/reset_chunk_counter.py" }]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [{ "type": "command", "command": "python3 ~/.claude/rlm/hooks/memory_write_redirect.py" }]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [{ "type": "command", "command": "python3 ~/.claude/rlm/hooks/memory_write_redirect.py" }]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash",
+        "hooks": [{ "type": "command", "command": "python3 ~/.claude/rlm/hooks/session_trace.py" }]
+      }
+    ],
+    "SessionStart": [{
+      "matcher": "",
+      "hooks": [{ "type": "command", "command": "python3 ~/.claude/rlm/hooks/session_orphans.py" }]
     }]
   }
 }
 ```
+
+Le même bloc vit dans `templates/hooks_settings.json`, que l'installeur lit.
+
+### Trace de session
+
+Fichier optionnel `~/.claude/rlm/session_trace.json` (chaque clé est optionnelle) :
+
+```json
+{
+  "notable_commands": ["ssh", "scp", "rsync", "psql", "kubectl", "terraform", "ansible-playbook", "deploy.sh"],
+  "min_edits": 5,
+  "idle_hours": 2,
+  "retention_days": 30,
+  "max_listed": 5
+}
+```
+
+- `notable_commands` : programmes dont le **nom** est noté quand une session les lance (jamais les arguments). Un seul lancement suffit pour qu'une session compte.
+- `min_edits` : une session compte au-delà de ce nombre d'Edit/Write.
+- `idle_hours` : une session inactive depuis moins longtemps est présumée encore en cours (les sessions parallèles ne sont pas signalées).
+- `retention_days` : les traces plus anciennes sont supprimées. À aligner sur `cleanupPeriodDays` de Claude Code (30 par défaut) : au-delà, le transcript a disparu et la session n'est de toute façon plus rattrapable.
 
 ### Langue
 
@@ -472,10 +525,7 @@ git clone https://github.com/EncrEor/rlm-claude.git /tmp/rlm-setup
 
 # Installer les hooks et i18n
 mkdir -p ~/.claude/rlm/hooks
-cp /tmp/rlm-setup/hooks/pre_compact_chunk.py ~/.claude/rlm/hooks/
-cp /tmp/rlm-setup/hooks/reset_chunk_counter.py ~/.claude/rlm/hooks/
-cp /tmp/rlm-setup/hooks/memory_write_redirect.py ~/.claude/rlm/hooks/
-cp /tmp/rlm-setup/hooks/i18n.py ~/.claude/rlm/hooks/
+cp /tmp/rlm-setup/hooks/*.py ~/.claude/rlm/hooks/
 chmod +x ~/.claude/rlm/hooks/*.py
 
 # Installer les skills (optionnel)
@@ -576,7 +626,8 @@ ls ~/.claude/rlm/hooks/                                  # Vérifier les hooks i
 - [x] **Phase 7** : Inspiré MAGMA (filtrage temporel, extraction d'entités)
 - [x] **Phase 8** : Recherche sémantique hybride (BM25 + cosinus, Model2Vec)
 - [x] **Phase 9** : Chunking typé — paramètre `chunk_type` (snapshot/session/debug/redirection insight)
-- [ ] **Phase 10** : Cohabitation auto-memory/RLM — hook Write/Edit redirige l'auto-memory vers RLM + i18n japonais
+- [x] **Phase 10** : Cohabitation auto-memory/RLM — hook Write/Edit redirige l'auto-memory vers RLM + i18n japonais
+- [x] **Phase 11** : Filets de sécurité — garde-fou PreCompact v2, recall trié par importance avec troncature signalée, trace de session + rapport des sessions non sauvegardées
 
 Voir [ROADMAP.md](ROADMAP.md) pour les détails.
 

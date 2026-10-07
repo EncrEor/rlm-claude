@@ -1,8 +1,8 @@
-## RLM - PERSISTENT MEMORY (v0.10.0)
+## RLM - PERSISTENT MEMORY (v0.11.0)
 
 ### Philosophy
 
-The user decides when to chunk. The system automatically saves before /compact.
+Chunking is a deliberate act: nothing is ever chunked automatically. The hooks only make sure an unsaved session cannot go unnoticed.
 
 ### Session startup (required)
 
@@ -52,10 +52,11 @@ rlm_status()
 
 **Test**: "Does this apply even when working on a completely different topic?" → `critical`
 
-### Auto-save
+### Safety nets (hooks)
 
-The PreCompact hook creates a minimal chunk before each /compact.
-After compaction, you can read this chunk and enrich it if needed.
+- **Manual `/compact` is blocked** when nothing was chunked in the last 15 minutes: chunk, then re-run it. Auto-compact is never blocked, only warned — so chunk at milestones, not at the end.
+- **Unsaved sessions are reported at startup**: a past session that changed files (or ran a notable program) and ended without a chunk is listed with its transcript path. Tell the user, then either recover it (have a subagent read the transcript and `rlm_chunk()` the summary) or, if it holds nothing worth keeping, acknowledge it:
+  `python3 ~/.claude/rlm/hooks/session_orphans.py --ack <session_id> "reason"`. Ask the user before either.
 
 ### This memory is YOURS
 

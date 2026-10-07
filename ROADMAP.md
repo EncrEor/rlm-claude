@@ -1,7 +1,7 @@
 # RLM - Roadmap
 
 > Pistes futures pour RLM - Memoire infinie pour Claude Code
-> **Derniere MAJ** : 2026-02-03 (v0.10.0 - Chunking Typé)
+> **Derniere MAJ** : 2026-10-07 (v0.11.0 - Filets de sécurité)
 
 ---
 
@@ -18,6 +18,8 @@
 | **Phase 7** | VALIDÉE | MAGMA-Inspired (filtre temporel + extraction entités) |
 | **Phase 8** | VALIDÉE | Hybrid Semantic Search (BM25 + cosine, model2vec) |
 | **Phase 9** | VALIDÉE | Chunking Typé (chunk_type: snapshot/session/debug) |
+| **Phase 10** | VALIDÉE (v0.10.x) | Cohabitation auto-memory/RLM (hook Write/Edit) + i18n japonais ; PreCompact v2 (bloque le /compact manuel sans chunk) ; recall trié par importance, troncature signalée |
+| **Phase 11** | VALIDÉE (v0.11.0) | Trace de session (métadonnées seules) + rapport des sessions terminées sans chunk au démarrage, lien chunk ↔ session |
 
 ---
 

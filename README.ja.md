@@ -116,9 +116,12 @@ git pull
     └──────────────────┘ └─────────────┘ └────────────────────┘
 ```
 
-### コンテキスト消失前の自動保存
+### 何も黙って失われない
 
-RLMはClaude Codeの `/compact` イベントにフックします。コンテキストが消去される前に、RLMが**自動的にスナップショットを保存**します。操作は不要です。
+チャンクは意図的な操作です。RLMが自分でチャンクを書くことはありません。その代わり、保存されていないセッションが見過ごされないようにします：
+
+- **`/compact` の前**: 直近15分間にチャンクがない場合、手動の `/compact` はブロックされます。チャンクしてから再実行すれば通ります。自動コンパクトはブロックされず（満杯のセッションを行き詰まらせるため）、警告のみです。
+- **セッションの後**: フックが各セッションの操作内容（ファイルパスと許可リストのプログラム名のみ、コマンドラインは記録しない）をトレースします。次の起動時に、変更を加えたのにチャンクなしで終了したセッションがトランスクリプト付きで一覧表示され、まだ復元できます。クラッシュや閉じたターミナルも対象です。検出するのは正常終了ではなく、チャンクの欠如だからです。
 
 ### 2つのメモリシステム
 
@@ -161,9 +164,11 @@ RLMはClaude Codeの `/compact` イベントにフックします。コンテキ
 - **アーカイブは降格であり、削除ではない**: アーカイブされたチャンクはアクティブインデックスから外れますが、`rlm_search` は要約とタグで引き続き一致させ、`archived_matches` として返します — `rlm_peek(chunk_id)` で完全に復元できます
 - **すべての取得がアクセスとしてカウントされます**（peek、grep、search のいずれも）。そのため検索で繰り返し浮上するチャンクは、未使用としてアーカイブされずに免除に達します
 
-### 自動チャンキング & メモリルーティング（フック）
-- **PreCompactフック**: `/compact` または自動コンパクト前の自動スナップショット
-- **PostToolUseフック (rlm_chunk)**: チャンク操作後の統計追跡
+### セーフティネット & メモリルーティング（フック）
+- **PreCompactフック**: 15分間チャンクがない手動 `/compact` をブロックし、自動コンパクトは警告のみ（ブロックしない）。自分でチャンクを作成することはありません
+- **PostToolUseフック (rlm_chunk)**: 最後のチャンク時刻を記録し（PreCompactフックが参照）、チャンクをセッションに紐付けます（インデックスに `session_id` と `transcript_path`）
+- **PostToolUseフック (Edit/Write/Bash)** — *セッショントレース*: セッションが編集したパスと、実行した許可リストのプログラム名を `~/.claude/rlm/sessions/<session_id>.jsonl` に追記します。コマンドラインは記録しません（パスワードを含む可能性があるため）
+- **SessionStartフック** — *未保存セッション*: 変更を加えたのにチャンクも確認もなく終了した過去のセッションを、トランスクリプトのパス付きで一覧表示します。確認済みにする: `python3 ~/.claude/rlm/hooks/session_orphans.py --ack <session_id> "理由"`
 - **PostToolUseフック (Write/Edit)**: Claude Codeのauto-memoryへの書き込みを検出し、決定事項、インサイト、セッションログはRLMへリダイレクト
 - ユーザー主導の思想: チャンクのタイミングはあなたが決め、システムは消失前に保存
 
@@ -229,19 +234,25 @@ python3 scripts/reconcile_stores.py --apply
 
 ## 比較
 
-| 機能 | 素のコンテキスト | Letta/MemGPT | **RLM** |
-|------|-----------------|--------------|---------|
-| 永続メモリ | なし | あり | **あり** |
-| Claude Codeで動作 | N/A | いいえ（独自ランタイム） | **ネイティブMCP** |
-| コンパクト前の自動保存 | なし | N/A | **あり（フック）** |
-| 検索（正規表現 + BM25 + セマンティック） | なし | 基本的 | **あり** |
-| あいまい検索（タイプミス耐性） | なし | なし | **あり** |
-| マルチプロジェクト対応 | なし | なし | **あり** |
-| スマートリテンション（アーカイブ/パージ） | なし | 基本的 | **あり** |
-| サブエージェント分析 | なし | なし | **あり** |
-| 設定不要のインストール | N/A | 複雑 | **3行** |
-| FR/EN/JA対応 | N/A | ENのみ | **3言語** |
-| コスト | 無料 | セルフホスト | **無料** |
+| 機能 | 素のコンテキスト | Letta/MemGPT | claude-mem | **RLM** |
+|------|-----------------|--------------|------------|---------|
+| 永続メモリ | なし | あり | あり | **あり** |
+| Claude Codeで動作 | N/A | いいえ（独自ランタイム） | プラグイン（フック + ワーカー） | **ネイティブMCP + フック** |
+| 保存されるもの | なし | エージェント管理 | すべてのツール呼び出し（LLMで圧縮） | **チャンクしたもの。未保存セッションは通知** |
+| バックグラウンドのLLM呼び出し | なし | あり | あり（観測ごと） | **なし** |
+| コンパクト前のガード | なし | N/A | N/A（常時キャプチャ） | **あり（チャンクなしの手動 `/compact` をブロック）** |
+| 検索（正規表現 + BM25 + セマンティック） | なし | 基本的 | 全文 + オプションのベクトル | **あり** |
+| あいまい検索（タイプミス耐性） | なし | なし | — | **あり** |
+| マルチプロジェクト対応 | なし | なし | あり | **あり** |
+| スマートリテンション（アーカイブ/パージ） | なし | 基本的 | — | **あり** |
+| サブエージェント分析 | なし | なし | — | **あり** |
+| 設定不要のインストール | N/A | 複雑 | コマンド1つ | **3行** |
+| FR/EN/JA対応 | N/A | ENのみ | 多言語モード | **3言語** |
+| コスト | 無料 | セルフホスト | LLM利用料またはホスト型プラン | **無料** |
+
+— = 未評価。claude-mem の列は2026年10月時点のドキュメントに基づきます。
+
+claude-mem と RLM は正反対の方針です。claude-mem はすべてを自動で記録し、モデル呼び出しで圧縮します。RLM は残すと決めたものだけをモデルコストなしで保存し、保存し忘れたセッションは黙って失われる代わりに通知されます。
 
 ---
 
@@ -339,9 +350,12 @@ rlm-claude/
 │
 ├── hooks/                     # Claude Codeフック
 │   ├── i18n.py                # フックメッセージの翻訳（EN/FR/JA）
-│   ├── pre_compact_chunk.py   # /compact前の自動保存（PreCompactフック）
+│   ├── pre_compact_chunk.py   # /compact前のガード（PreCompactフック）
 │   ├── memory_write_redirect.py # auto-memoryをRLMへリダイレクト（PostToolUseフック）
-│   └── reset_chunk_counter.py # チャンク後の統計リセット（PostToolUseフック）
+│   ├── reset_chunk_counter.py # 最後のチャンク時刻 + チャンク↔セッション紐付け（PostToolUseフック）
+│   ├── session_trace.py       # セッションの操作内容、メタデータのみ（PostToolUseフック）
+│   ├── session_orphans.py     # 起動時の未保存セッション、--ack（SessionStartフック）
+│   └── session_common.py      # 共通のパス、設定、ロック付きインデックス更新
 │
 ├── templates/
 │   ├── hooks_settings.json    # フック設定テンプレート
@@ -381,13 +395,52 @@ rlm-claude/
         "hooks": [{ "type": "command", "command": "python3 ~/.claude/rlm/hooks/pre_compact_chunk.py" }]
       }
     ],
-    "PostToolUse": [{
-      "matcher": "mcp__rlm-server__rlm_chunk",
-      "hooks": [{ "type": "command", "command": "python3 ~/.claude/rlm/hooks/reset_chunk_counter.py" }]
+    "PostToolUse": [
+      {
+        "matcher": "mcp__rlm-server__rlm_chunk",
+        "hooks": [{ "type": "command", "command": "python3 ~/.claude/rlm/hooks/reset_chunk_counter.py" }]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [{ "type": "command", "command": "python3 ~/.claude/rlm/hooks/memory_write_redirect.py" }]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [{ "type": "command", "command": "python3 ~/.claude/rlm/hooks/memory_write_redirect.py" }]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash",
+        "hooks": [{ "type": "command", "command": "python3 ~/.claude/rlm/hooks/session_trace.py" }]
+      }
+    ],
+    "SessionStart": [{
+      "matcher": "",
+      "hooks": [{ "type": "command", "command": "python3 ~/.claude/rlm/hooks/session_orphans.py" }]
     }]
   }
 }
 ```
+
+同じブロックが `templates/hooks_settings.json` にあり、インストーラーはこれを読み込みます。
+
+### セッショントレース
+
+オプションの `~/.claude/rlm/session_trace.json`（すべてのキーは任意）：
+
+```json
+{
+  "notable_commands": ["ssh", "scp", "rsync", "psql", "kubectl", "terraform", "ansible-playbook", "deploy.sh"],
+  "min_edits": 5,
+  "idle_hours": 2,
+  "retention_days": 30,
+  "max_listed": 5
+}
+```
+
+- `notable_commands`: セッションが実行したときに**名前**だけを記録するプログラム（引数は記録しません）。1回の実行でセッションは対象になります。
+- `min_edits`: Edit/Write がこの数を超えるセッションが対象です。
+- `idle_hours`: 無操作がこれより短いセッションは実行中とみなします（並行セッションは通知されません）。
+- `retention_days`: これより古いトレースは削除されます。Claude Code の `cleanupPeriodDays`（デフォルト30）に合わせてください。それを過ぎるとトランスクリプトは消え、セッションは復元できません。
 
 ### 言語
 
@@ -459,10 +512,7 @@ git clone https://github.com/EncrEor/rlm-claude.git /tmp/rlm-setup
 
 # フックとi18nをインストール
 mkdir -p ~/.claude/rlm/hooks
-cp /tmp/rlm-setup/hooks/pre_compact_chunk.py ~/.claude/rlm/hooks/
-cp /tmp/rlm-setup/hooks/reset_chunk_counter.py ~/.claude/rlm/hooks/
-cp /tmp/rlm-setup/hooks/memory_write_redirect.py ~/.claude/rlm/hooks/
-cp /tmp/rlm-setup/hooks/i18n.py ~/.claude/rlm/hooks/
+cp /tmp/rlm-setup/hooks/*.py ~/.claude/rlm/hooks/
 chmod +x ~/.claude/rlm/hooks/*.py
 
 # スキルをインストール（オプション）
@@ -563,7 +613,8 @@ ls ~/.claude/rlm/hooks/                                  # インストール済
 - [x] **フェーズ7**: MAGMA対応（時間フィルタリング、エンティティ抽出）
 - [x] **フェーズ8**: ハイブリッドセマンティック検索（BM25 + コサイン、Model2Vec）
 - [x] **フェーズ9**: 型付きチャンキング — `chunk_type` パラメータ（snapshot/session/debug/insightリダイレクト）
-- [ ] **フェーズ10**: auto-memory/RLM共存 — Write/Editフックがauto-memoryをRLMへリダイレクト + 日本語i18n
+- [x] **フェーズ10**: auto-memory/RLM共存 — Write/Editフックがauto-memoryをRLMへリダイレクト + 日本語i18n
+- [x] **フェーズ11**: セーフティネット — PreCompactガード v2、重要度順のrecallと切り捨て通知、セッショントレース + 未保存セッションの通知
 
 ---
 

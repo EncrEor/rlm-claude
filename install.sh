@@ -134,9 +134,7 @@ echo "  OK - Directories created"
 # 2. Copy hook scripts
 # =============================================================================
 echo "[2/7] Installing hooks..."
-cp "$SCRIPT_DIR/hooks/pre_compact_chunk.py" "$RLM_DIR/hooks/"
-cp "$SCRIPT_DIR/hooks/reset_chunk_counter.py" "$RLM_DIR/hooks/"
-cp "$SCRIPT_DIR/hooks/i18n.py" "$RLM_DIR/hooks/"
+cp "$SCRIPT_DIR/hooks/"*.py "$RLM_DIR/hooks/"
 chmod +x "$RLM_DIR/hooks/"*.py
 echo "  OK - Hooks installed"
 
@@ -211,38 +209,17 @@ from pathlib import Path
 
 settings_file = Path.home() / ".claude" / "settings.json"
 
-# RLM hooks to add (matches templates/hooks_settings.json)
-rlm_hooks = {
-    "PreCompact": [
-        {
-            "matcher": "manual",
-            "hooks": [{
-                "type": "command",
-                "command": "python3 ~/.claude/rlm/hooks/pre_compact_chunk.py"
-            }]
-        },
-        {
-            "matcher": "auto",
-            "hooks": [{
-                "type": "command",
-                "command": "python3 ~/.claude/rlm/hooks/pre_compact_chunk.py"
-            }]
-        }
-    ],
-    "PostToolUse": [{
-        "matcher": "mcp__rlm-server__rlm_chunk",
-        "hooks": [{
-            "type": "command",
-            "command": "python3 ~/.claude/rlm/hooks/reset_chunk_counter.py"
-        }]
-    }]
-}
+# RLMRLM_HOOKS_TEMPLATE="$SCRIPT_DIR/templates/hooks_settings.json" python3 << 'PYTHON_SCRIPT'
+import json
+import os
+from pathlib import Path
 
-# Load or create settings
-if settings_file.exists():
-    try:
-        with open(settings_file) as f:
-            settings = json.load(f)
+settings_file = Path.home() / ".claude" / "settings.json"
+
+# Single source of truth: templates/hooks_settings.json
+rlm_hooks = json.loads(Path(os.environ["RLM_HOOKS_TEMPLATE"]).read_text())["hooks"]
+
+load(f)
     except:
         settings = {}
 else:

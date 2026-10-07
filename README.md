@@ -118,9 +118,12 @@ Your data (`~/.claude/rlm/`) is untouched. Only the server path is updated.
     └──────────────────┘ └─────────────┘ └────────────────────┘
 ```
 
-### Auto-Save Before Context Loss
+### Nothing Lost Silently
 
-RLM hooks into Claude Code's `/compact` event. Before your context is wiped, RLM **automatically saves a snapshot**. No action needed.
+Chunking is a deliberate act: RLM never writes a chunk on its own. What it does is make sure an unsaved session cannot go unnoticed:
+
+- **Before `/compact`**: a manual `/compact` is blocked when nothing was chunked in the last 15 minutes. Chunk, re-run it, it passes. Auto-compact is never blocked (that would strand a full session), only warned.
+- **After a session**: a hook traces what each session touched (file paths and allow-listed program names, never command lines). At the next start, a session that changed things and ended without a chunk is listed with its transcript, so it can still be recovered. Crashes and closed terminals are covered too: it is the missing chunk that is detected, not a clean exit.
 
 ### Two Memory Systems
 
@@ -163,9 +166,11 @@ RLM hooks into Claude Code's `/compact` event. Before your context is wiped, RLM
 - **Archiving is a demotion, not a deletion**: archived chunks leave the active index, but `rlm_search` still matches them by summary and tags and returns them under `archived_matches` — `rlm_peek(chunk_id)` restores one in full
 - **Every retrieval counts as an access** (peek, grep and search alike), so a chunk your searches keep surfacing reaches immunity instead of being archived as idle
 
-### Auto-Chunking & Memory Routing (Hooks)
-- **PreCompact hook**: Automatic snapshot before `/compact` or auto-compact
-- **PostToolUse hook (rlm_chunk)**: Stats tracking after chunk operations
+### Safety Nets & Memory Routing (Hooks)
+- **PreCompact hook**: blocks a manual `/compact` with no chunk in the last 15 minutes; warns (never blocks) on auto-compact. It never creates a chunk itself
+- **PostToolUse hook (rlm_chunk)**: records when the last chunk happened (read by the PreCompact hook) and ties the chunk to its session (`session_id` and `transcript_path` in the index)
+- **PostToolUse hook (Edit/Write/Bash)** — *session trace*: appends to `~/.claude/rlm/sessions/<session_id>.jsonl` the paths a session edits and the basenames of allow-listed programs it runs. Never a command line: it can carry passwords
+- **SessionStart hook** — *unsaved sessions*: lists past sessions that changed things and ended with neither a chunk nor an acknowledgement, with their transcript path. Acknowledge one with `python3 ~/.claude/rlm/hooks/session_orphans.py --ack <session_id> "reason"`
 - **PostToolUse hook (Write/Edit)**: Detects writes to Claude Code's auto-memory and nudges toward RLM for decisions, insights, and session logs
 - User-driven philosophy: you decide when to chunk, the system saves before loss
 
@@ -236,19 +241,25 @@ server — the script refuses to mix vector dimensions.
 
 ## Comparison
 
-| Feature | Raw Context | Letta/MemGPT | **RLM** |
-|---------|-------------|--------------|---------|
-| Persistent memory | No | Yes | **Yes** |
-| Works with Claude Code | N/A | No (own runtime) | **Native MCP** |
-| Auto-save before compact | No | N/A | **Yes (hooks)** |
-| Search (regex + BM25 + semantic) | No | Basic | **Yes** |
-| Fuzzy search (typo-tolerant) | No | No | **Yes** |
-| Multi-project support | No | No | **Yes** |
-| Smart retention (archive/purge) | No | Basic | **Yes** |
-| Sub-agent analysis | No | No | **Yes** |
-| Zero config install | N/A | Complex | **3 lines** |
-| FR/EN/JA support | N/A | EN only | **3 languages** |
-| Cost | Free | Self-hosted | **Free** |
+| Feature | Raw Context | Letta/MemGPT | claude-mem | **RLM** |
+|---------|-------------|--------------|------------|---------|
+| Persistent memory | No | Yes | Yes | **Yes** |
+| Works with Claude Code | N/A | No (own runtime) | Plugin (hooks + worker) | **Native MCP + hooks** |
+| What gets saved | Nothing | Agent-managed | Every tool call, compressed by an LLM | **What you chunk; unsaved sessions are flagged** |
+| Background LLM calls | No | Yes | Yes (per observation) | **None** |
+| Guard before compact | No | N/A | N/A (captures continuously) | **Yes (manual `/compact` blocked without a chunk)** |
+| Search (regex + BM25 + semantic) | No | Basic | Full-text + optional vector | **Yes** |
+| Fuzzy search (typo-tolerant) | No | No | — | **Yes** |
+| Multi-project support | No | No | Yes | **Yes** |
+| Smart retention (archive/purge) | No | Basic | — | **Yes** |
+| Sub-agent analysis | No | No | — | **Yes** |
+| Zero config install | N/A | Complex | One command | **3 lines** |
+| FR/EN/JA support | N/A | EN only | Multi-language modes | **3 languages** |
+| Cost | Free | Self-hosted | LLM usage or hosted plan | **Free** |
+
+— = not assessed. The claude-mem column reflects its documentation as of October 2026.
+
+claude-mem and RLM make opposite bets. claude-mem records everything automatically and spends model calls to compress it; RLM stores only what you decide to keep, at no model cost, and makes sure a session you forgot to save is pointed out to you instead of silently lost.
 
 ---
 
@@ -348,9 +359,12 @@ rlm-claude/
 │
 ├── hooks/                     # Claude Code hooks
 │   ├── i18n.py                # Translations (EN/FR/JA) for hook messages
-│   ├── pre_compact_chunk.py   # Auto-save before /compact (PreCompact hook)
+│   ├── pre_compact_chunk.py   # Guard before /compact (PreCompact hook)
 │   ├── memory_write_redirect.py # Redirect auto-memory writes to RLM (PostToolUse hook)
-│   └── reset_chunk_counter.py # Stats reset after chunk (PostToolUse hook)
+│   ├── reset_chunk_counter.py # Last-chunk time + chunk ↔ session link (PostToolUse hook)
+│   ├── session_trace.py       # What a session touches, metadata only (PostToolUse hook)
+│   ├── session_orphans.py     # Unsaved past sessions at startup, --ack (SessionStart hook)
+│   └── session_common.py      # Shared paths, config and lock-safe index update
 │
 ├── templates/
 │   ├── hooks_settings.json    # Hook config template
@@ -390,13 +404,52 @@ The installer automatically configures hooks in `~/.claude/settings.json`:
         "hooks": [{ "type": "command", "command": "python3 ~/.claude/rlm/hooks/pre_compact_chunk.py" }]
       }
     ],
-    "PostToolUse": [{
-      "matcher": "mcp__rlm-server__rlm_chunk",
-      "hooks": [{ "type": "command", "command": "python3 ~/.claude/rlm/hooks/reset_chunk_counter.py" }]
+    "PostToolUse": [
+      {
+        "matcher": "mcp__rlm-server__rlm_chunk",
+        "hooks": [{ "type": "command", "command": "python3 ~/.claude/rlm/hooks/reset_chunk_counter.py" }]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [{ "type": "command", "command": "python3 ~/.claude/rlm/hooks/memory_write_redirect.py" }]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [{ "type": "command", "command": "python3 ~/.claude/rlm/hooks/memory_write_redirect.py" }]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash",
+        "hooks": [{ "type": "command", "command": "python3 ~/.claude/rlm/hooks/session_trace.py" }]
+      }
+    ],
+    "SessionStart": [{
+      "matcher": "",
+      "hooks": [{ "type": "command", "command": "python3 ~/.claude/rlm/hooks/session_orphans.py" }]
     }]
   }
 }
 ```
+
+The same block lives in `templates/hooks_settings.json`, which the installer reads.
+
+### Session Trace
+
+Optional `~/.claude/rlm/session_trace.json` (every key optional):
+
+```json
+{
+  "notable_commands": ["ssh", "scp", "rsync", "psql", "kubectl", "terraform", "ansible-playbook", "deploy.sh"],
+  "min_edits": 5,
+  "idle_hours": 2,
+  "retention_days": 30,
+  "max_listed": 5
+}
+```
+
+- `notable_commands`: programs whose **basename** is recorded when a session runs them (arguments never are). One notable run is enough for a session to count.
+- `min_edits`: a session with more Edit/Write than this counts.
+- `idle_hours`: a session idle for less than this is presumed still running (parallel sessions are left alone).
+- `retention_days`: traces older than this are deleted. Keep it aligned with Claude Code's `cleanupPeriodDays` (30 by default): past it the transcript is gone and the session cannot be recovered anyway.
 
 ### Language
 
@@ -468,10 +521,7 @@ git clone https://github.com/EncrEor/rlm-claude.git /tmp/rlm-setup
 
 # Install hooks and i18n
 mkdir -p ~/.claude/rlm/hooks
-cp /tmp/rlm-setup/hooks/pre_compact_chunk.py ~/.claude/rlm/hooks/
-cp /tmp/rlm-setup/hooks/reset_chunk_counter.py ~/.claude/rlm/hooks/
-cp /tmp/rlm-setup/hooks/memory_write_redirect.py ~/.claude/rlm/hooks/
-cp /tmp/rlm-setup/hooks/i18n.py ~/.claude/rlm/hooks/
+cp /tmp/rlm-setup/hooks/*.py ~/.claude/rlm/hooks/
 chmod +x ~/.claude/rlm/hooks/*.py
 
 # Install skills (optional)
@@ -572,7 +622,8 @@ ls ~/.claude/rlm/hooks/                                  # Check installed hooks
 - [x] **Phase 7**: MAGMA-inspired (temporal filtering, entity extraction)
 - [x] **Phase 8**: Hybrid semantic search (BM25 + cosine, Model2Vec)
 - [x] **Phase 9**: Typed chunking — `chunk_type` parameter (snapshot/session/debug/insight redirect)
-- [ ] **Phase 10**: Auto-memory/RLM cohabitation — Write/Edit hook redirects auto-memory to RLM + Japanese i18n
+- [x] **Phase 10**: Auto-memory/RLM cohabitation — Write/Edit hook redirects auto-memory to RLM + Japanese i18n
+- [x] **Phase 11**: Safety nets — PreCompact guard v2, recall ranked by importance with truncation reported, session trace + unsaved-session report
 
 ---
 

@@ -43,6 +43,21 @@ MESSAGES = {
             "• Session log, snapshot, debug → rlm_chunk()\n"
             "Auto-memory = quick-reference only (patterns, ports, shortcuts)."
         ),
+        # session_orphans.py
+        "orphan_header": "{n} past session(s) changed things and ended without a chunk:",
+        "orphan_line": "• {when} - {edits} edits on {files} files ({dirs}) - session {session_id}",
+        "orphan_notable": " - ran: {names}",
+        "orphan_transcript": "  transcript: {path} (kept until about {until})",
+        "orphan_transcript_gone": "  transcript: no longer available",
+        "orphan_more": "+ {n} more.",
+        "orphan_elsewhere": "+ {n} in other projects.",
+        "orphan_repair": (
+            "Recover one: have a subagent read its transcript, then rlm_chunk() the summary. "
+            "Nothing worth keeping: python3 ~/.claude/rlm/hooks/session_orphans.py --ack <session_id> \"reason\". "
+            "Ask the user before doing either."
+        ),
+        "ack_done": "Session {session_id} acknowledged: it will no longer be reported.",
+        "ack_unknown": "No trace for session {session_id}.",
     },
     "fr": {
         # pre_compact_chunk.py
@@ -76,6 +91,21 @@ MESSAGES = {
             "• Log session, snapshot, debug → rlm_chunk()\n"
             "Auto-memory = quick-reference seulement (patterns, ports, raccourcis)."
         ),
+        # session_orphans.py
+        "orphan_header": "{n} session(s) passée(s) ont modifié des fichiers et se sont terminées sans chunk :",
+        "orphan_line": "• {when} - {edits} modifications sur {files} fichiers ({dirs}) - session {session_id}",
+        "orphan_notable": " - a lancé : {names}",
+        "orphan_transcript": "  transcript : {path} (conservé jusqu'au {until} environ)",
+        "orphan_transcript_gone": "  transcript : plus disponible",
+        "orphan_more": "+ {n} autre(s).",
+        "orphan_elsewhere": "+ {n} dans d'autres projets.",
+        "orphan_repair": (
+            "Rattraper : faire lire le transcript par un sous-agent, puis rlm_chunk() de sa synthèse. "
+            "Rien à garder : python3 ~/.claude/rlm/hooks/session_orphans.py --ack <session_id> \"raison\". "
+            "Demander à l'utilisateur avant l'un ou l'autre."
+        ),
+        "ack_done": "Session {session_id} acquittée : elle ne sera plus signalée.",
+        "ack_unknown": "Aucune trace pour la session {session_id}.",
     },
     "ja": {
         # pre_compact_chunk.py
@@ -109,6 +139,21 @@ MESSAGES = {
             "• セッションログ、スナップショット、デバッグ → rlm_chunk()\n"
             "auto-memory = クイックリファレンスのみ（パターン、ポート、ショートカット）。"
         ),
+        # session_orphans.py
+        "orphan_header": "{n} 件の過去セッションがファイルを変更し、チャンクなしで終了しました:",
+        "orphan_line": "• {when} - {files} ファイルに {edits} 件の編集 ({dirs}) - セッション {session_id}",
+        "orphan_notable": " - 実行: {names}",
+        "orphan_transcript": "  トランスクリプト: {path}（{until} 頃まで保持）",
+        "orphan_transcript_gone": "  トランスクリプト: 利用できません",
+        "orphan_more": "+ 他 {n} 件。",
+        "orphan_elsewhere": "+ 他のプロジェクトで {n} 件。",
+        "orphan_repair": (
+            "復元: サブエージェントにトランスクリプトを読ませ、その要約を rlm_chunk() してください。"
+            "保存不要: python3 ~/.claude/rlm/hooks/session_orphans.py --ack <session_id> \"理由\"。"
+            "どちらの場合も先にユーザーに確認してください。"
+        ),
+        "ack_done": "セッション {session_id} を確認済みにしました。今後は表示されません。",
+        "ack_unknown": "セッション {session_id} のトレースがありません。",
     },
 }
 

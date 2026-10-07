@@ -47,6 +47,26 @@
             "command": "python3 ~/.claude/rlm/hooks/memory_write_redirect.py"
           }
         ]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ~/.claude/rlm/hooks/session_trace.py"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ~/.claude/rlm/hooks/session_orphans.py"
+          }
+        ]
       }
     ]
   }

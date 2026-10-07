@@ -7,10 +7,39 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-10-07
+
+### Added — Unsaved sessions are reported, not silently lost
+- Chunking stays deliberate, so a session that ends without `rlm_chunk()` — closed terminal, crash, auto-compact, plain forgetting — used to leave no trace at all. Nothing told the next session that work had gone unsaved.
+- **`hooks/session_trace.py`** (PostToolUse on `Edit|Write|MultiEdit|NotebookEdit|Bash`) appends to `~/.claude/rlm/sessions/<session_id>.jsonl` the paths a session edits and, for Bash, only the **basenames of allow-listed programs** (`notable_commands`). The command line is never recorded: it can carry passwords and tokens. A test feeds it `sshpass -p <secret> …` and checks the secret never reaches the trace.
+- **`hooks/session_orphans.py`** (SessionStart) lists past sessions that are over (idle for `idle_hours`), mattered (more than `min_edits` edits, or one notable program run) and carry neither a chunk nor an acknowledgement — with their transcript path and the date until which Claude Code keeps it. It detects the *missing chunk*, not a clean exit, so crashes are covered. Sessions of the current project are detailed, others only counted; the current session and sessions possibly still running in parallel are skipped. `--ack <session_id> "reason"` records that a session holds nothing worth keeping. Traces older than `retention_days` (30, Claude Code's default transcript retention) are deleted.
+- **`hooks/reset_chunk_counter.py`** now also ties each chunk to its session: a `chunk` event in the trace, and `session_id` + `transcript_path` on the chunk in `index.json` (same flock protocol as the server; a duplicate chunk keeps its first session). The `last_chunk` timestamp read by the PreCompact guard is still written first and unconditionally.
+- Thresholds and the allow-list live in an optional `~/.claude/rlm/session_trace.json`. Messages in EN/FR/JA. 19 tests run the real hook scripts against a throwaway `HOME`.
+
+### Fixed — Installer and docs
+- `install.sh` copied three hooks out of four (`memory_write_redirect.py` was registered but never installed) and kept its own hand-written copy of the hook config, which had drifted from `templates/hooks_settings.json`. It now copies every hook and reads the template.
+- `uninstall.sh` removes every hook under `~/.claude/rlm/hooks/` instead of a fixed list that missed `memory_write_redirect.py`, and the session traces with the other runtime files.
+- The READMEs (EN/FR/JA) and `templates/CLAUDE_RLM_SNIPPET.md` still promised that RLM "automatically saves a snapshot" before `/compact`. It never did since the PreCompact v2 guard: rewritten to describe what the hooks actually do. claude-mem added to the comparison table.
+
+
 ### Fixed — FastEmbed model cache no longer lives in the temp directory
 - fastembed defaults to `tempfile.gettempdir()/fastembed_cache`. macOS sweeps that directory: the ~235 MB model blob disappeared while the snapshot symlinks stayed, the load failed with `NO_SUCHFILE` instead of re-downloading, and every chunk written meanwhile was stored without a vector (4 chunks on 26-27 Sept. 2026, found by `rlm_status`). `FastEmbedProvider` now passes a persistent `cache_dir` (`~/.cache/fastembed`); `FASTEMBED_CACHE_PATH` still overrides it.
 - `scripts/reconcile_stores.py` is safe to run while sessions are live: vectors are computed outside the lock and written inside `VectorStore.locked()` on a fresh load, and `index.json` goes through `locked_json_update()` instead of rewriting the snapshot read at startup (which would have dropped any chunk indexed by another session meanwhile). A healed chunk also loses the `embedded: false` flag set at write time.
 - The test suite no longer runs against the developer's real context: `tests/conftest.py` binds `RLM_CONTEXT_DIR` to a throwaway directory before any `mcp_server` import. `CONTEXT_DIR` is resolved at import time, so the suite used to append fake warnings to the live `rlm.log` (surfaced by `rlm_status` as real ones) and to attempt writes of test vectors into the live store — stopped only by a dimension mismatch. A guard test fails if the redirection ever stops. An inherited `RLM_EMBEDDING_PROVIDER` is dropped as well: three provider tests assume the default provider and failed under `fastembed`.
+
+### Added — Review-driven archiving (`scripts/retire_chunks.py`)
+- `rlm_retention_run()` archives by age and use; it cannot tell a stale state from a valid old decision. `scripts/retire_chunks.py` archives from a **reviewed manifest**: each chunk carries why it is obsolete, what supersedes it, and whether it is cleared for a later purge.
+- The archive entry is annotated (`archive_reason`, `superseded_by`, `purge_ok`, `review`) and its summary prefixed (`[OBSOLETE → <superseded_by>]`). `rlm_search` lists archived matches by summary, so a reader who meets the archive is told it is obsolete and where the current state lives, instead of restoring it as if it were true.
+- `purge_ok: false` adds the protected tag `keep`: that archive is never a purge candidate, whatever its age. A later run with `purge_ok: true` lifts the hold the tool placed (never a tag the chunk already had).
+- Dry-run by default; `--apply` requires `--expect N` and aborts before the first write on any other count, on an unknown id, or on an ambiguous manifest. Re-running is idempotent. Nothing is ever deleted.
+- `scripts/purge_reviewed.py` is the matching final step: it purges only archives carrying `purge_ok: true` (optionally of one review label), never a held or never-reviewed entry, dry-run by default, `--apply --expect N`. Purging stays a decision of the person who owns the memory.
+
+### Fixed — The server accepts the chunk IDs it generates
+- `rlm_chunk(ticket="#364")` builds the ID `…_#364_…`, but `validate_chunk_id()` rejected `#`: 29 real chunks could neither be peeked, archived nor restored — the tool answered "Invalid chunk ID format" to its own IDs. `#` is now allowed (it is harmless in a file name; slashes and `..` stay blocked), and a test pins the contract that any generated ID passes validation.
+
+### Fixed — Retention no longer races with live sessions
+- `archive_chunk()`, `restore_chunk()` and `purge_chunk()` rewrote `index.json`, `archive_index.json` and `purge_log.json` with a plain load → modify → save, while chunk creation and access bookkeeping rewrite the same index under `locked_json_update()`. With several sessions open, an archive could drop the chunk another session had just indexed, or have its own removal undone when that session wrote back what it had read — leaving an index entry with no file behind it. All three now go through `locked_json_update()`. A regression test holds the lock from a second writer and checks that the archive waits and that both changes survive.
+- `rlm_remember()` and `rlm_forget()` had the same flaw on `session_memory.json`: load → append → save with no lock, so of two sessions saving an insight at the same moment, the slower one erased the other's. Both now run inside `locked_json_update()`, with the same kind of regression test.
 
 ### Changed — PreCompact hook v2
 - **A manual `/compact` is now blocked (`exit 2`) when no `rlm_chunk()` happened in the last 15 minutes**, with the reason written to stderr so it reaches the model, not just the terminal. Chunk, then re-run `/compact` — it passes. The previous version emitted a `systemMessage` and `exit 0`: the reminder was displayed to the user but never reached Claude, and nothing was blocked, so the documented "auto-save before compact" did not exist.

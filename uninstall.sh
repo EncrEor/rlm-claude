@@ -228,12 +228,9 @@ except (json.JSONDecodeError, FileNotFoundError):
 hooks = settings.get("hooks", {})
 removed = 0
 
-# RLM hook commands to match (covers all versions)
-rlm_patterns = [
-    "rlm/hooks/auto_chunk_check.py",
-    "rlm/hooks/reset_chunk_counter.py",
-    "rlm/hooks/pre_compact_chunk.py",
-]
+# Every RLM hook lives in ~/.claude/rlm/hooks/: match the directory, so hooks
+# added by later versions are removed too (covers all versions)
+rlm_patterns = ["rlm/hooks/"]
 
 for hook_type in list(hooks.keys()):
     original_count = len(hooks[hook_type])
@@ -370,6 +367,14 @@ else
         run_or_dry rm -f "$RLM_DIR/chunk_state.json"
         if [ "$DRY_RUN" != true ]; then
             success "Removed chunk_state.json"
+        fi
+    fi
+
+    # Remove session traces (runtime metadata of the session_trace hook, not user data)
+    if [ -d "$RLM_DIR/sessions" ]; then
+        run_or_dry rm -rf "$RLM_DIR/sessions"
+        if [ "$DRY_RUN" != true ]; then
+            success "Removed session traces"
         fi
     fi
 
