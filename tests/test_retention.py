@@ -131,6 +131,56 @@ created_at: {chunk["created_at"]}
 
 
 # =============================================================================
+# CONCURRENCY TESTS
+# =============================================================================
+
+
+def test_archive_waits_for_a_writer_holding_the_index_lock(retention_context, old_chunks):
+    """Archiving must queue behind a session that is mid-update on the index.
+
+    Chunk creation and access bookkeeping rewrite index.json under
+    locked_json_update(). An archive that read and rewrote the index without
+    that lock would either drop the chunk the other session is adding, or see
+    its own removal undone when that session writes back what it had read.
+    """
+    import threading
+    import time
+
+    from mcp_server.tools import retention
+    from mcp_server.tools.fileutil import locked_json_update
+
+    index_file = retention_context / "index.json"
+    inside, release = threading.Event(), threading.Event()
+
+    def other_session():
+        with locked_json_update(index_file) as index:
+            inside.set()
+            release.wait(timeout=10)
+            index["chunks"].append({"id": "written_by_another_session", "summary": "x", "tags": []})
+
+    writer = threading.Thread(target=other_session)
+    writer.start()
+    assert inside.wait(timeout=10)
+
+    result = {}
+    archiver = threading.Thread(
+        target=lambda: result.update(retention.archive_chunk("old_unused_001"))
+    )
+    archiver.start()
+    time.sleep(0.4)
+    assert archiver.is_alive(), "archive_chunk raced ahead of a writer holding the index lock"
+
+    release.set()
+    writer.join(timeout=10)
+    archiver.join(timeout=10)
+
+    ids = [c["id"] for c in json.loads(index_file.read_text())["chunks"]]
+    assert result["status"] == "archived"
+    assert "written_by_another_session" in ids
+    assert "old_unused_001" not in ids
+
+
+# =============================================================================
 # IMMUNITY TESTS
 # =============================================================================
 

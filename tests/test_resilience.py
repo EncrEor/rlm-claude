@@ -321,3 +321,21 @@ def test_search_archives_finds_by_metadata(tmp_path, monkeypatch):
 
     assert retention.search_archives("") == []
     assert retention.search_archives("nonexistent topic") == []
+
+
+def test_generated_ids_pass_validation(tmp_path, monkeypatch):
+    """Whatever _next_chunk_id() builds must be accepted by validate_chunk_id().
+
+    Ticket references are embedded verbatim ("_#364_"), and "#" used to be
+    rejected by the pattern: 29 real chunks could neither be peeked, archived
+    nor restored, the tool answering "Invalid chunk ID format" to its own IDs.
+    """
+    from mcp_server.tools import navigation
+    from mcp_server.tools.fileutil import validate_chunk_id
+
+    monkeypatch.setattr(navigation, "CHUNKS_DIR", tmp_path)
+    for ticket in ("#364", "JJ-123", "CRM-198-204-205", None):
+        cid = navigation._next_chunk_id({"chunks": []}, "MyProject", ticket, "r&d")
+        assert validate_chunk_id(cid), cid
+    assert not validate_chunk_id("../etc/passwd")
+    assert not validate_chunk_id("a/b")

@@ -18,7 +18,9 @@ from pathlib import Path
 
 # Chunk ID format: alphanumeric, hyphens, underscores, dots, ampersands
 # Blocks path traversal sequences like "../" or absolute paths
-CHUNK_ID_PATTERN = re.compile(r"^[\w.&-]+$")
+# "#" is allowed because chunk() embeds the ticket verbatim in the ID ("_#364_"): an ID
+# the server itself generates must pass its own validation, or peek/archive/restore refuse it.
+CHUNK_ID_PATTERN = re.compile(r"^[\w.&#-]+$")
 
 
 def resolve_context_dir() -> Path:
@@ -73,7 +75,7 @@ def validate_chunk_id(chunk_id: str) -> bool:
     """
     Validate chunk ID format to prevent path traversal.
 
-    Allows: alphanumeric, hyphens, underscores, dots, ampersands.
+    Allows: alphanumeric, hyphens, underscores, dots, ampersands, hashes.
     Blocks: slashes, "..", null bytes, and other special characters.
 
     Args:

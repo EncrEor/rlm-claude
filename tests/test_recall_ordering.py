@@ -125,3 +125,61 @@ def test_unknown_importance_does_not_crash(memory_file):
 
     assert result["insights"][0]["importance"] == "critical"
     assert result["count"] == 2
+
+
+# =============================================================================
+# Concurrent writers
+# =============================================================================
+
+
+def test_remember_and_forget_round_trip(memory_file):
+    """The write path creates the store, stamps it, and removes on demand."""
+    saved = memory.remember("first insight", category="fact", importance="medium", tags=["a"])
+    memory.remember("second insight")
+
+    data = json.loads(memory_file.read_text())
+    assert [i["content"] for i in data["insights"]] == ["first insight", "second insight"]
+    assert data["metadata"]["total_insights"] == 2
+
+    assert memory.forget(saved["id"])["remaining_insights"] == 1
+    assert memory.forget("missing0")["status"] == "not_found"
+    assert [i["content"] for i in json.loads(memory_file.read_text())["insights"]] == [
+        "second insight"
+    ]
+
+
+def test_remember_waits_for_a_writer_holding_the_memory_lock(memory_file):
+    """Two sessions saving insights must both survive.
+
+    remember() used to load, append and save with no lock: a session that read
+    the file before another wrote, and saved after, erased that other insight.
+    """
+    import threading
+    import time
+
+    from mcp_server.tools.fileutil import locked_json_update
+
+    _write(memory_file, [])
+    inside, release = threading.Event(), threading.Event()
+
+    def other_session():
+        with locked_json_update(memory_file) as data:
+            inside.set()
+            release.wait(timeout=10)
+            data["insights"].append(_insight(1, "medium", 0, content="from the other session"))
+
+    writer = threading.Thread(target=other_session)
+    writer.start()
+    assert inside.wait(timeout=10)
+
+    saver = threading.Thread(target=lambda: memory.remember("from this session"))
+    saver.start()
+    time.sleep(0.4)
+    assert saver.is_alive(), "remember() raced ahead of a writer holding the memory lock"
+
+    release.set()
+    writer.join(timeout=10)
+    saver.join(timeout=10)
+
+    contents = {i["content"] for i in json.loads(memory_file.read_text())["insights"]}
+    assert contents == {"from the other session", "from this session"}

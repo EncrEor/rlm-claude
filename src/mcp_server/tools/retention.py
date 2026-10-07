@@ -22,7 +22,7 @@ from .diagnostics import log_warning
 from .fileutil import (
     CONTEXT_DIR,
     MAX_DECOMPRESSED_SIZE,
-    atomic_write_json,
+    locked_json_update,
     safe_path,
     validate_chunk_id,
 )
@@ -51,40 +51,40 @@ PROTECTED_KEYWORDS = ["DECISION:", "IMPORTANT:", "A RETENIR:", "CRITICAL:"]
 # =============================================================================
 
 
+def _empty_index() -> dict:
+    """Skeleton of a chunk index that does not exist yet."""
+    return {
+        "version": "2.1.0",
+        "created_at": datetime.now().isoformat(),
+        "chunks": [],
+    }
+
+
+def _empty_archive_index() -> dict:
+    """Skeleton of an archive index that does not exist yet."""
+    return {
+        "version": "1.0.0",
+        "created_at": datetime.now().isoformat(),
+        "archives": [],
+    }
+
+
 def _load_index() -> dict:
     """Load chunks index from JSON file."""
     if not INDEX_FILE.exists():
-        return {
-            "version": "2.1.0",
-            "created_at": datetime.now().isoformat(),
-            "chunks": [],
-        }
+        return _empty_index()
 
     with open(INDEX_FILE, encoding="utf-8") as f:
         return json.load(f)
 
 
-def _save_index(index: dict) -> None:
-    """Save chunks index atomically."""
-    atomic_write_json(INDEX_FILE, index)
-
-
 def _load_archive_index() -> dict:
     """Load archive index from JSON file."""
     if not ARCHIVE_INDEX_FILE.exists():
-        return {
-            "version": "1.0.0",
-            "created_at": datetime.now().isoformat(),
-            "archives": [],
-        }
+        return _empty_archive_index()
 
     with open(ARCHIVE_INDEX_FILE, encoding="utf-8") as f:
         return json.load(f)
-
-
-def _save_archive_index(archive_index: dict) -> None:
-    """Save archive index atomically."""
-    atomic_write_json(ARCHIVE_INDEX_FILE, archive_index)
 
 
 def _load_purge_log() -> dict:
@@ -98,11 +98,6 @@ def _load_purge_log() -> dict:
 
     with open(PURGE_LOG_FILE, encoding="utf-8") as f:
         return json.load(f)
-
-
-def _save_purge_log(purge_log: dict) -> None:
-    """Save purge log atomically."""
-    atomic_write_json(PURGE_LOG_FILE, purge_log)
 
 
 # =============================================================================
@@ -367,34 +362,34 @@ def archive_chunk(chunk_id: str) -> dict:
 
         compressed_size = dst_file.stat().st_size
 
-        # Get chunk metadata from index
-        index = _load_index()
+        # Take the chunk out of the main index under the writers' lock. Chunk
+        # creation and access bookkeeping hold that same lock: an unlocked
+        # read-modify-write here would silently drop a chunk another session
+        # added in between, or let that session write this chunk back.
         chunk_meta = None
-        remaining_chunks = []
-
-        for chunk in index.get("chunks", []):
-            if chunk.get("id") == chunk_id:
-                chunk_meta = chunk.copy()
-            else:
-                remaining_chunks.append(chunk)
+        with locked_json_update(INDEX_FILE, default=_empty_index()) as index:
+            remaining_chunks = []
+            for chunk in index.get("chunks", []):
+                if chunk.get("id") == chunk_id:
+                    chunk_meta = chunk.copy()
+                else:
+                    remaining_chunks.append(chunk)
+            index["chunks"] = remaining_chunks
+            index["total_chunks"] = len(remaining_chunks)
 
         if chunk_meta is None:
             # Chunk not in index, create minimal metadata
             chunk_meta = {"id": chunk_id}
 
-        # Update main index (remove chunk)
-        index["chunks"] = remaining_chunks
-        index["total_chunks"] = len(remaining_chunks)
-        _save_index(index)
-
         # Add to archive index
-        archive_index = _load_archive_index()
         archive_entry = chunk_meta.copy()
         archive_entry["archived_at"] = datetime.now().isoformat()
         archive_entry["original_size"] = original_size
         archive_entry["compressed_size"] = compressed_size
-        archive_index["archives"].append(archive_entry)
-        _save_archive_index(archive_index)
+        with locked_json_update(
+            ARCHIVE_INDEX_FILE, default=_empty_archive_index()
+        ) as archive_index:
+            archive_index.setdefault("archives", []).append(archive_entry)
 
         # Delete original file
         src_file.unlink()
@@ -471,20 +466,18 @@ def restore_chunk(chunk_id: str) -> dict:
         # Keep semantic store in sync: a restored chunk re-enters active search.
         _semantic_add(chunk_id, content)
 
-        # Get archive metadata
-        archive_index = _load_archive_index()
+        # Take the entry out of the archive index (locked read-modify-write)
         archive_meta = None
-        remaining_archives = []
-
-        for archive in archive_index.get("archives", []):
-            if archive.get("id") == chunk_id:
-                archive_meta = archive.copy()
-            else:
-                remaining_archives.append(archive)
-
-        # Update archive index (remove)
-        archive_index["archives"] = remaining_archives
-        _save_archive_index(archive_index)
+        with locked_json_update(
+            ARCHIVE_INDEX_FILE, default=_empty_archive_index()
+        ) as archive_index:
+            remaining_archives = []
+            for archive in archive_index.get("archives", []):
+                if archive.get("id") == chunk_id:
+                    archive_meta = archive.copy()
+                else:
+                    remaining_archives.append(archive)
+            archive_index["archives"] = remaining_archives
 
         # Add back to main index
         if archive_meta:
@@ -493,10 +486,9 @@ def restore_chunk(chunk_id: str) -> dict:
             archive_meta.pop("original_size", None)
             archive_meta.pop("compressed_size", None)
 
-            index = _load_index()
-            index["chunks"].append(archive_meta)
-            index["total_chunks"] = len(index["chunks"])
-            _save_index(index)
+            with locked_json_update(INDEX_FILE, default=_empty_index()) as index:
+                index.setdefault("chunks", []).append(archive_meta)
+                index["total_chunks"] = len(index["chunks"])
 
         # Delete archive file
         archive_file.unlink()
@@ -541,18 +533,16 @@ def purge_chunk(chunk_id: str) -> dict:
 
     try:
         # Get archive metadata
-        archive_index = _load_archive_index()
-        archive_meta = None
-        remaining_archives = []
+        archive_meta = next(
+            (
+                a.copy()
+                for a in _load_archive_index().get("archives", [])
+                if a.get("id") == chunk_id
+            ),
+            None,
+        )
 
-        for archive in archive_index.get("archives", []):
-            if archive.get("id") == chunk_id:
-                archive_meta = archive.copy()
-            else:
-                remaining_archives.append(archive)
-
-        # Log to purge log (metadata only, no content)
-        purge_log = _load_purge_log()
+        # Log to purge log (metadata only, no content) — before anything is removed
         purge_entry = {
             "id": chunk_id,
             "purged_at": datetime.now().isoformat(),
@@ -561,12 +551,19 @@ def purge_chunk(chunk_id: str) -> dict:
             "created_at": archive_meta.get("created_at", "") if archive_meta else "",
             "archived_at": archive_meta.get("archived_at", "") if archive_meta else "",
         }
-        purge_log["purged"].append(purge_entry)
-        _save_purge_log(purge_log)
+        with locked_json_update(
+            PURGE_LOG_FILE,
+            default={"version": "1.0.0", "created_at": datetime.now().isoformat(), "purged": []},
+        ) as purge_log:
+            purge_log.setdefault("purged", []).append(purge_entry)
 
-        # Update archive index (remove)
-        archive_index["archives"] = remaining_archives
-        _save_archive_index(archive_index)
+        # Update archive index (remove) — locked read-modify-write
+        with locked_json_update(
+            ARCHIVE_INDEX_FILE, default=_empty_archive_index()
+        ) as archive_index:
+            archive_index["archives"] = [
+                a for a in archive_index.get("archives", []) if a.get("id") != chunk_id
+            ]
 
         # Delete archive file
         archive_file.unlink()

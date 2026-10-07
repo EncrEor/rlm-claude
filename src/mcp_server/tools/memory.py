@@ -10,7 +10,7 @@ import hashlib
 import json
 from datetime import datetime
 
-from .fileutil import CONTEXT_DIR, atomic_write_json
+from .fileutil import CONTEXT_DIR, locked_json_update
 from .tokenizer_fr import tokenize_fr
 
 MEMORY_FILE = CONTEXT_DIR / "session_memory.json"
@@ -20,28 +20,33 @@ MEMORY_FILE = CONTEXT_DIR / "session_memory.json"
 IMPORTANCE_ORDER = {"critical": 4, "high": 3, "medium": 2, "low": 1}
 
 
+def _empty_memory() -> dict:
+    """Skeleton of a memory file that does not exist yet."""
+    return {
+        "version": "1.0.0",
+        "insights": [],
+        "metadata": {
+            "created_at": datetime.now().isoformat(),
+            "last_updated": None,
+            "total_insights": 0,
+        },
+    }
+
+
 def _load_memory() -> dict:
     """Load session memory from JSON file."""
     if not MEMORY_FILE.exists():
-        return {
-            "version": "1.0.0",
-            "insights": [],
-            "metadata": {
-                "created_at": datetime.now().isoformat(),
-                "last_updated": None,
-                "total_insights": 0,
-            },
-        }
+        return _empty_memory()
 
     with open(MEMORY_FILE, encoding="utf-8") as f:
         return json.load(f)
 
 
-def _save_memory(memory: dict) -> None:
-    """Save session memory atomically."""
-    memory["metadata"]["last_updated"] = datetime.now().isoformat()
-    memory["metadata"]["total_insights"] = len(memory["insights"])
-    atomic_write_json(MEMORY_FILE, memory)
+def _stamp(memory: dict) -> None:
+    """Refresh the bookkeeping fields before a write."""
+    metadata = memory.setdefault("metadata", {})
+    metadata["last_updated"] = datetime.now().isoformat()
+    metadata["total_insights"] = len(memory["insights"])
 
 
 def _generate_id(content: str) -> str:
@@ -74,8 +79,6 @@ def remember(
     Returns:
         Confirmation with insight ID
     """
-    memory = _load_memory()
-
     insight = {
         "id": _generate_id(content + datetime.now().isoformat()),
         "content": content,
@@ -85,14 +88,18 @@ def remember(
         "created_at": datetime.now().isoformat(),
     }
 
-    memory["insights"].append(insight)
-    _save_memory(memory)
+    # Locked read-modify-write: several sessions share this file, and a plain
+    # load → append → save lets the slower one overwrite the other's insight.
+    with locked_json_update(MEMORY_FILE, default=_empty_memory()) as memory:
+        memory.setdefault("insights", []).append(insight)
+        _stamp(memory)
+        total = len(memory["insights"])
 
     return {
         "status": "saved",
         "id": insight["id"],
         "message": f"Insight saved with ID {insight['id']}",
-        "total_insights": len(memory["insights"]),
+        "total_insights": total,
     }
 
 
@@ -202,20 +209,20 @@ def forget(insight_id: str) -> dict:
     Returns:
         Confirmation of removal
     """
-    memory = _load_memory()
+    with locked_json_update(MEMORY_FILE, default=_empty_memory()) as memory:
+        original_count = len(memory.get("insights", []))
+        memory["insights"] = [i for i in memory.get("insights", []) if i["id"] != insight_id]
+        remaining = len(memory["insights"])
+        if remaining != original_count:
+            _stamp(memory)
 
-    original_count = len(memory["insights"])
-    memory["insights"] = [i for i in memory["insights"] if i["id"] != insight_id]
-
-    if len(memory["insights"]) == original_count:
+    if remaining == original_count:
         return {"status": "not_found", "message": f"No insight found with ID {insight_id}"}
-
-    _save_memory(memory)
 
     return {
         "status": "deleted",
         "message": f"Insight {insight_id} removed from memory",
-        "remaining_insights": len(memory["insights"]),
+        "remaining_insights": remaining,
     }
 
 
